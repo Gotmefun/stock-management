@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นับสต๊อกสินค้า - ระบบจัดการสต๊อก</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 1rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .scanner-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .scanner-header h2 {
+            color: #333;
+        }
+        
+        .scanner-toggle {
+            background: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .scanner-toggle:hover {
+            background: #218838;
+        }
+        
+        .scanner-toggle.stop {
+            background: #dc3545;
+        }
+        
+        .scanner-toggle.stop:hover {
+            background: #c82333;
+        }
+        
+        #qr-reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .camera-container {
+            margin-bottom: 1rem;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .camera-btn {
+            background: #17a2b8;
+            color: white;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .camera-btn:hover {
+            background: #138496;
+        }
+        
+        .camera-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        #video {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        #photo {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .submit-btn {
+            background: #28a745;
+            color: white;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .submit-btn:hover {
+            background: #218838;
+        }
+        
+        .submit-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .product-info {
+            background: #e7f3ff;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .product-info h3 {
+            color: #0056b3;
+            margin-bottom: 0.5rem;
+        }
+        
+        .alert {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .recent-scans {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .recent-scans h3 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .scan-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .scan-item:last-child {
+            border-bottom: none;
+        }
+        
+        .scan-info {
+            flex: 1;
+        }
+        
+        .scan-info h4 {
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+        
+        .scan-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .scan-quantity {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .camera-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>นับสต๊อกสินค้า</h1>
+        <div class="user-info">
+            <span>ผู้ใช้: {{ session.username }}</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
+        </div>
+    </div>
+    
+    <div class="scanner-container">
+        <div class="scanner-header">
+            <h2>สแกนบาร์โค้ด</h2>
+            <button id="scanner-toggle" class="scanner-toggle" onclick="toggleScanner()">เปิดกล้อง</button>
+        </div>
+        <div id="qr-reader" style="display: none;"></div>
+    </div>
+    
+    <div class="form-container">
+        <div id="alert-container"></div>
+        
+        <div id="product-info" class="product-info">
+            <h3 id="product-name"></h3>
+            <p>บาร์โค้ด: <span id="product-barcode"></span></p>
+        </div>
+        
+        <form id="stock-form">
+            <div class="form-group">
+                <label for="counter_name">ชื่อผู้ตรวจนับสินค้า:</label>
+                <input type="text" id="counter_name" name="counter_name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="barcode">บาร์โค้ด:</label>
+                <input type="text" id="barcode" name="barcode" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity">จำนวนคงเหลือ:</label>
+                <input type="number" id="quantity" name="quantity" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="branch">สาขา:</label>
+                <select id="branch" name="branch" required>
+                    <option value="">เลือกสาขา</option>
+                    <option value="สาขาหลัก">สาขาหลัก</option>
+                    <option value="สาขาตัวเมือง">สาขาตัวเมือง</option>
+                    <option value="สาขาโป่งไผ่">สาขาโป่งไผ่</option>
+                    <option value="สาขาหน้าโรงเรียน">สาขาหน้าโรงเรียน</option>
+                </select>
+            </div>
+            
+            <div class="camera-container">
+                <label>ถ่ายภาพสินค้า:</label>
+                <div class="camera-controls">
+                    <button type="button" class="camera-btn" id="start-camera">เปิดกล้อง</button>
+                    <button type="button" class="camera-btn" id="take-photo" disabled>ถ่ายภาพ</button>
+                    <button type="button" class="camera-btn" id="retake-photo" disabled>ถ่ายใหม่</button>
+                </div>
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <img id="photo" alt="Photo preview">
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submit-btn">บันทึกข้อมูล</button>
+        </form>
+    </div>
+    
+    <div class="recent-scans">
+        <h3>การนับล่าสุด</h3>
+        <div id="recent-scans-list">
+            <p style="text-align: center; color: #666;">ยังไม่มีการนับสต๊อก</p>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="{{ url_for('static', filename='barcode.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - ระบบจัดการสต๊อก</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .demo-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .demo-card-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .demo-card-body {
+            padding: 30px;
+        }
+        
+        .demo-screenshot {
+            width: 100%;
+            height: 300px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .feature-list li:before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+            top: 10px;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .login-demo {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .login-demo h4 {
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+        
+        .barcode-samples {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .barcode-samples h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .barcode-item {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tech-stack {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .tech-stack h4 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+        
+        .tech-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            margin: 5px 5px 5px 0;
+        }
+        
+        .instructions {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-top: 30px;
+        }
+        
+        .instructions h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .demo-card-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 ระบบจัดการสต๊อกและวิเคราะห์การขายสินค้า</h1>
+            <p>Demo หน้าตา UI และฟีเจอร์ต่างๆ ของระบบ</p>
+        </div>
+        
+        <div class="demo-grid">
+            <!-- Login Page Demo -->
+            <div class="demo-card">
+                <div class="demo-card-header">
+                    <h2>🔐 หน้าเข้าสู่ระบบ</h2>
+                </div>
+                <div class="demo-card-body">
+                    <div class="demo-screenshot">
+                        <div style="text-align: center;">
+                            <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 250px;">
+                                <h3 style="color: #333; margin-bottom: 20px;">เข้าสู่ระบบ</h3>
+                                <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; text-align: left;">ชื่อผู้ใช้</div>
+                                <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; text-align: left;">รหัสผ่าน</div>
+                                <div style="background: #667eea; color: white; padding: 10px; border-radius: 5px;">เข้าสู่ระบบ</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <ul class="feature-list">
+                        <li>สวยงาม Mobile-friendly</li>
+                        <li>ระบบ Authentication ปลอดภัย</li>
+                        <li>แบ่งสิทธิ์ Admin/Staff</li>
+                        <li>บัญชีทดสอบพร้อมใช้</li>
+                    </ul>
+                    
+                    <div class="login-demo">
+                        <h4>📋 บัญชีทดสอบ:</h4>
+                        <p><strong>Admin:</strong> admin / admin123</p>
+                        <p><strong>Staff:</strong> staff / staff123</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stock Counting Demo -->
+            <div class="demo-card">
+                <div class="demo-card-header">
+                    <h2>📱 หน้านับสต๊อก (Staff)</h2>
+                </div>
+                <div class="demo-card-body">
+                    <div class="demo-screenshot">
+                        <div style="text-align: center;">
+                            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 280px;">
+                                <h4 style="color: #333; margin-bottom: 15px;">📱 สแกนบาร์โค้ด</h4>
+                                <div style="background: #000; color: #0f0; padding: 20px; margin: 10px 0; border-radius: 5px; font-family: monospace;">░░▓▓░░▓▓░░</div>
+                                <div style="background: #e7f3ff; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                                    <strong>น้ำดื่ม 600ml</strong><br>
+                                    <small>1234567890123</small>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 8px; margin: 5px 0; border-radius: 3px; text-align: left;">จำนวน: 50</div>
+                                <div style="background: #f8f9fa; padding: 8px; margin: 5px 0; border-radius: 3px; text-align: left;">สาขา: สาขาหลัก</div>
+                                <div style="background: #28a745; color: white; padding: 10px; border-radius: 5px;">บันทึกข้อมูล</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <ul class="feature-list">
+                        <li>สแกนบาร์โค้ดด้วยกล้องมือถือ</li>
+                        <li>ค้นหาสินค้าอัตโนมัติ</li>
+                        <li>ถ่ายภาพสินค้าและอัปโหลด</li>
+                        <li>เลือกสาขาได้หลายแห่ง</li>
+                        <li>บันทึกประวัติการนับ</li>
+                    </ul>
+                    
+                    <div class="barcode-samples">
+                        <h4>🔍 บาร์โค้ดทดสอบ:</h4>
+                        <div class="barcode-item">1234567890123 - น้ำดื่ม 600ml</div>
+                        <div class="barcode-item">2345678901234 - ข้าวสาร 5kg</div>
+                        <div class="barcode-item">3456789012345 - นมถั่วเหลือง</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Summary Demo -->
+            <div class="demo-card">
+                <div class="demo-card-header">
+                    <h2>📊 รายงานสรุป (Admin)</h2>
+                </div>
+                <div class="demo-card-body">
+                    <div class="demo-screenshot">
+                        <div style="text-align: center;">
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 300px;">
+                                <h4 style="color: #333; margin-bottom: 15px;">📈 วิเคราะห์สต๊อก</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                    <div style="background: #667eea; color: white; padding: 15px; border-radius: 5px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold;">245</div>
+                                        <div style="font-size: 0.8rem;">สต๊อกรวม</div>
+                                    </div>
+                                    <div style="background: #28a745; color: white; padding: 15px; border-radius: 5px; text-align: center;">
+                                        <div style="font-size: 1.5rem; font-weight: bold;">127</div>
+                                        <div style="font-size: 0.8rem;">ขาย 30 วัน</div>
+                                    </div>
+                                </div>
+                                <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 5px; text-align: left;">สินค้า</th>
+                                        <th style="padding: 5px; text-align: center;">สต๊อก</th>
+                                        <th style="padding: 5px; text-align: center;">ขาย</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px;">น้ำดื่ม</td>
+                                        <td style="padding: 5px; text-align: center;">45</td>
+                                        <td style="padding: 5px; text-align: center;">20</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 5px;">ข้าวสาร</td>
+                                        <td style="padding: 5px; text-align: center;">12</td>
+                                        <td style="padding: 5px; text-align: center;">8</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <ul class="feature-list">
+                        <li>วิเคราะห์สต๊อกเทียบยอดขาย</li>
+                        <li>คำนวณวันคงเหลือ</li>
+                        <li>แนะนำการสั่งซื้อ</li>
+                        <li>สรุปตามสาขา</li>
+                        <li>ส่งออกข้อมูล CSV</li>
+                        <li>กรองและเรียงลำดับ</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Slow Moving Demo -->
+            <div class="demo-card">
+                <div class="demo-card-header">
+                    <h2>⚠️ สินค้าไม่เคลื่อนไหว</h2>
+                </div>
+                <div class="demo-card-body">
+                    <div class="demo-screenshot">
+                        <div style="text-align: center;">
+                            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 300px;">
+                                <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9rem;">
+                                    ⚠️ สินค้าไม่มีการขาย 30 วัน
+                                </div>
+                                <h4 style="color: #333; margin-bottom: 15px;">📋 รายการเสี่ยง</h4>
+                                <div style="background: #f8d7da; color: #721c24; padding: 10px; margin: 5px 0; border-radius: 5px; font-size: 0.9rem;">
+                                    ผงซักฟอก 3kg<br>
+                                    <small>สต๊อก: 15 | ไม่เคยขาย</small>
+                                </div>
+                                <div style="background: #f8d7da; color: #721c24; padding: 10px; margin: 5px 0; border-radius: 5px; font-size: 0.9rem;">
+                                    ยาสีฟัน 160g<br>
+                                    <small>สต๊อก: 8 | ขาย: 45 วันที่แล้ว</small>
+                                </div>
+                                <div style="background: #17a2b8; color: white; padding: 8px; border-radius: 5px; font-size: 0.9rem;">ส่งออก CSV</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <ul class="feature-list">
+                        <li>ระบุสินค้าไม่เคลื่อนไหว</li>
+                        <li>แสดงวันที่ขายครั้งล่าสุด</li>
+                        <li>คำแนะนำการจัดการ</li>
+                        <li>ส่งออกรายงาน</li>
+                        <li>ค้นหาและกรองข้อมูล</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>🚀 วิธีการทดลองใช้งาน</h2>
+            
+            <div class="step">
+                <h3>ขั้นตอนที่ 1: ติดตั้ง Dependencies</h3>
+                <div class="code-block">pip install flask pandas</div>
+                <p>หรือติดตั้งจาก requirements.txt:</p>
+                <div class="code-block">pip install -r requirements.txt</div>
+            </div>
+            
+            <div class="step">
+                <h3>ขั้นตอนที่ 2: สร้างฐานข้อมูล</h3>
+                <div class="code-block">python3 init_db.py</div>
+                <p>สคริปต์นี้จะสร้างฐานข้อมูล SQLite พร้อมข้อมูลทดสอบ</p>
+            </div>
+            
+            <div class="step">
+                <h3>ขั้นตอนที่ 3: รันระบบ</h3>
+                <div class="code-block">python3 app.py</div>
+                <p>หรือใช้สคริปต์รันง่าย:</p>
+                <div class="code-block">python3 run.py</div>
+            </div>
+            
+            <div class="step">
+                <h3>ขั้นตอนที่ 4: เปิดเบราว์เซอร์</h3>
+                <div class="code-block">http://localhost:5000</div>
+                <p>ทดลองเข้าสู่ระบบด้วย:</p>
+                <ul style="margin-top: 10px;">
+                    <li><strong>Admin:</strong> admin / admin123 (ดูรายงาน)</li>
+                    <li><strong>Staff:</strong> staff / staff123 (นับสต๊อก)</li>
+                </ul>
+            </div>
+            
+            <div class="step">
+                <h3>ขั้นตอนที่ 5: ทดสอบบนมือถือ</h3>
+                <p>เข้าเว็บไซต์ด้วยมือถือเพื่อทดสอบ:</p>
+                <ul style="margin-top: 10px;">
+                    <li>📱 สแกนบาร์โค้ดด้วยกล้อง</li>
+                    <li>📸 ถ่ายภาพสินค้า</li>
+                    <li>👆 Touch-friendly interface</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="tech-stack">
+            <h4>🛠️ เทคโนโลยีที่ใช้:</h4>
+            <span class="tech-badge">Python Flask</span>
+            <span class="tech-badge">SQLite</span>
+            <span class="tech-badge">HTML5</span>
+            <span class="tech-badge">JavaScript</span>
+            <span class="tech-badge">html5-qrcode</span>
+            <span class="tech-badge">Google Drive API</span>
+            <span class="tech-badge">Pandas</span>
+            <span class="tech-badge">Mobile Responsive</span>
+        </div>
+    </div>
+</body>
+</html>
