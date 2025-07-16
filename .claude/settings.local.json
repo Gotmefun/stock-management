@@ -3,7 +3,9 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(cd:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
