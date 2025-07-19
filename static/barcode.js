@@ -49,13 +49,21 @@ function startScanner() {
     
     Html5Qrcode.getCameras().then(devices => {
         if (devices && devices.length) {
-            cameraId = devices[0].id;
+            // Try to find back camera first
+            let backCamera = devices.find(device => 
+                device.label.toLowerCase().includes('back') || 
+                device.label.toLowerCase().includes('rear') ||
+                device.label.toLowerCase().includes('environment')
+            );
+            
+            cameraId = backCamera ? backCamera.id : devices[devices.length - 1].id;
             
             html5QrCode.start(
                 cameraId,
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 }
+                    qrbox: { width: 250, height: 250 },
+                    facingMode: "environment" // Force back camera
                 },
                 onScanSuccess,
                 onScanFailure
@@ -134,22 +142,34 @@ function startCamera() {
     const startButton = document.getElementById('start-camera');
     const takeButton = document.getElementById('take-photo');
     
-    navigator.mediaDevices.getUserMedia({ 
-        video: { 
-            facingMode: 'environment' // Use back camera if available
-        } 
-    })
-    .then(function(mediaStream) {
-        stream = mediaStream;
-        video.srcObject = stream;
-        video.style.display = 'block';
-        startButton.disabled = true;
-        takeButton.disabled = false;
-    })
-    .catch(function(err) {
-        console.error('Error accessing camera:', err);
-        showAlert('ไม่สามารถเข้าถึงกล้องได้', 'error');
-    });
+    // Try back camera first, fallback to any camera
+    const constraints = [
+        { video: { facingMode: { exact: "environment" } } }, // Force back camera
+        { video: { facingMode: "environment" } }, // Prefer back camera
+        { video: true } // Any camera
+    ];
+    
+    async function tryCamera(constraintIndex = 0) {
+        if (constraintIndex >= constraints.length) {
+            showAlert('ไม่สามารถเข้าถึงกล้องได้', 'error');
+            return;
+        }
+        
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia(constraints[constraintIndex]);
+            stream = mediaStream;
+            video.srcObject = stream;
+            video.style.display = 'block';
+            startButton.disabled = true;
+            takeButton.disabled = false;
+        } catch (err) {
+            console.error(`Error with constraint ${constraintIndex}:`, err);
+            // Try next constraint
+            tryCamera(constraintIndex + 1);
+        }
+    }
+    
+    tryCamera();
 }
 
 function takePhoto() {
