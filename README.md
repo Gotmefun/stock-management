@@ -274,3 +274,4 @@ MIT License - ใช้งานได้อย่างอิสระ
 - 📱 Mobile-first design
 - 🔒 Secure authentication
 - 📊 Data analytics# stock-check-web
+# stock-management
