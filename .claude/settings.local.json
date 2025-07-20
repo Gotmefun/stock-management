@@ -5,7 +5,20 @@
       "Bash(cd:*)",
       "Bash(python3:*)",
       "Bash(git remote add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(sudo apt:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(apt:*)",
+      "Bash(timeout:*)",
+      "Bash(pkill:*)",
+      "Bash(./ngrok version)",
+      "Bash(chmod:*)",
+      "Bash(./start_with_ngrok.sh:*)",
+      "Bash(rm:*)",
+      "Bash(wget:*)",
+      "Bash(tar:*)"
     ],
     "deny": []
   }

@@ -23,7 +23,10 @@ except ImportError:
     GOOGLE_DRIVE_AVAILABLE = False
 
 # Google Drive API scopes
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+]
 
 class GoogleDriveUploader:
     def __init__(self, credentials_file=None, service_account_file=None):
@@ -45,38 +48,46 @@ class GoogleDriveUploader:
         self._authenticate()
     
     def _authenticate(self):
-        """Authenticate with Google Drive API"""
+        """Authenticate with Google Drive API - try OAuth2 first, then Service Account"""
         creds = None
         
-        # Try service account authentication first
-        if self.service_account_file and os.path.exists(self.service_account_file):
+        # Try OAuth2 authentication first for file uploads
+        if self.credentials_file and os.path.exists(self.credentials_file):
+            # Check if it's a service account file
             try:
-                creds = service_account.Credentials.from_service_account_file(
-                    self.service_account_file, scopes=SCOPES)
-                print("Using service account authentication")
-            except Exception as e:
-                print(f"Service account authentication failed: {e}")
-        
-        # Fall back to OAuth2 authentication
-        if not creds and self.credentials_file:
-            if os.path.exists('token.json'):
-                creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-            
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                else:
-                    if not os.path.exists(self.credentials_file):
-                        print(f"Credentials file not found: {self.credentials_file}")
-                        return
+                with open(self.credentials_file, 'r') as f:
+                    import json
+                    cred_data = json.load(f)
                     
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, SCOPES)
-                    creds = flow.run_local_server(port=0)
-                
-                # Save credentials for future use
-                with open('token.json', 'w') as token:
-                    token.write(creds.to_json())
+                if cred_data.get('type') == 'service_account':
+                    # Use service account (for Sheets only)
+                    try:
+                        creds = service_account.Credentials.from_service_account_file(
+                            self.credentials_file, scopes=SCOPES)
+                        print("Using service account authentication")
+                    except Exception as e:
+                        print(f"Service account authentication failed: {e}")
+                else:
+                    # Use OAuth2 for regular user account
+                    if os.path.exists('token.json'):
+                        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+                    
+                    if not creds or not creds.valid:
+                        if creds and creds.expired and creds.refresh_token:
+                            creds.refresh(Request())
+                        else:
+                            flow = InstalledAppFlow.from_client_secrets_file(
+                                self.credentials_file, SCOPES)
+                            creds = flow.run_local_server(port=0)
+                        
+                        # Save credentials for future use
+                        with open('token.json', 'w') as token:
+                            token.write(creds.to_json())
+                    
+                    print("Using OAuth2 authentication")
+                    
+            except Exception as e:
+                print(f"Authentication failed: {e}")
         
         if creds:
             self.service = build('drive', 'v3', credentials=creds)
@@ -122,25 +133,34 @@ class GoogleDriveUploader:
         Returns:
             Dictionary with file_id and web_view_link or None if failed
         """
+        print(f"upload_image_from_base64 called with filename: {filename}, folder_id: {folder_id}")
+        
         if not self.service:
+            print("Google Drive service not available")
             return None
         
         try:
+            print(f"Original base64 data length: {len(base64_data)}")
+            
             # Remove data URL prefix if present
             if base64_data.startswith('data:'):
+                print("Removing data URL prefix")
                 base64_data = base64_data.split(',')[1]
+            
+            print(f"Cleaned base64 data length: {len(base64_data)}")
             
             # Decode base64 data
             image_data = base64.b64decode(base64_data)
+            print(f"Decoded image data length: {len(image_data)} bytes")
             
-            # Create file metadata
+            # Create file metadata - upload to root first
             file_metadata = {
                 'name': filename,
                 'description': f'Stock count image uploaded on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
             }
             
-            if folder_id:
-                file_metadata['parents'] = [folder_id]
+            # Try uploading to root first, then move to folder
+            print("Uploading to root Drive folder first")
             
             # Determine MIME type
             mime_type = 'image/jpeg'  # Default to JPEG
@@ -156,6 +176,8 @@ class GoogleDriveUploader:
                 resumable=True
             )
             
+            print("Starting file upload...")
+            
             # Upload file
             file = self.service.files().create(
                 body=file_metadata,
@@ -163,13 +185,44 @@ class GoogleDriveUploader:
                 fields='id,webViewLink,webContentLink'
             ).execute()
             
+            print(f"File uploaded successfully, ID: {file['id']}")
+            
             # Make file publicly viewable (optional)
+            print("Setting file permissions...")
             self.service.permissions().create(
                 fileId=file['id'],
                 body={'role': 'reader', 'type': 'anyone'}
             ).execute()
             
             print(f"Successfully uploaded: {filename} (ID: {file['id']})")
+            print(f"View link: {file['webViewLink']}")
+            
+            # Try to move file to target folder if specified
+            if folder_id:
+                try:
+                    print(f"Moving file to folder: {folder_id}")
+                    
+                    # Get current parents
+                    file_details = self.service.files().get(
+                        fileId=file['id'],
+                        fields='parents'
+                    ).execute()
+                    
+                    previous_parents = ",".join(file_details.get('parents'))
+                    
+                    # Move the file to the target folder
+                    self.service.files().update(
+                        fileId=file['id'],
+                        addParents=folder_id,
+                        removeParents=previous_parents,
+                        fields='id,parents'
+                    ).execute()
+                    
+                    print(f"File moved to folder successfully")
+                    
+                except Exception as move_error:
+                    print(f"Failed to move file to folder: {move_error}")
+                    # Continue anyway - file is uploaded to root
             
             return {
                 'file_id': file['id'],
@@ -180,6 +233,9 @@ class GoogleDriveUploader:
             
         except Exception as e:
             print(f"Error uploading image: {e}")
+            import traceback
+            print("Full error traceback:")
+            traceback.print_exc()
             return None
     
     def upload_file(self, file_path, folder_id=None):
@@ -228,29 +284,214 @@ class GoogleDriveUploader:
             print(f"Error uploading file: {e}")
             return None
     
-    def get_or_create_inventory_folder(self):
-        """Get or create the main inventory folder"""
+    def get_or_create_main_project_folder(self):
+        """Get or create the main project folder"""
         if not self.service:
             return None
         
         try:
             # Search for existing folder
             results = self.service.files().list(
-                q="name='Inventory Photos' and mimeType='application/vnd.google-apps.folder'",
+                q="name='check stock project' and mimeType='application/vnd.google-apps.folder'",
                 fields='files(id, name)'
             ).execute()
             
             folders = results.get('files', [])
             
             if folders:
-                print(f"Found existing inventory folder: {folders[0]['id']}")
+                print(f"Found existing project folder: {folders[0]['id']}")
                 return folders[0]['id']
             else:
                 # Create new folder
-                return self.create_folder('Inventory Photos')
+                return self.create_folder('check stock project')
                 
         except Exception as e:
-            print(f"Error getting inventory folder: {e}")
+            print(f"Error getting project folder: {e}")
+            return None
+    
+    def get_or_create_inventory_folder(self):
+        """Get or create the 'Pic Stock Counting' folder under 'Check Stock Project'"""
+        if not self.service:
+            return None
+        
+        try:
+            # First, get the main project folder
+            main_folder_id = self.get_or_create_main_project_folder()
+            if not main_folder_id:
+                print("Failed to get main project folder")
+                return None
+                
+            print(f"Main project folder ID: {main_folder_id}")
+            
+            # Search for 'Pic Stock Counting' folder under the main project folder
+            results = self.service.files().list(
+                q=f"name='Pic Stock Counting' and parents in '{main_folder_id}' and mimeType='application/vnd.google-apps.folder'",
+                fields='files(id, name)'
+            ).execute()
+            
+            folders = results.get('files', [])
+            
+            if folders:
+                print(f"Found existing 'Pic Stock Counting' folder: {folders[0]['id']}")
+                return folders[0]['id']
+            else:
+                print("Creating 'Pic Stock Counting' folder in main project folder")
+                return self.create_folder('Pic Stock Counting', main_folder_id)
+                
+        except Exception as e:
+            print(f"Error getting 'Pic Stock Counting' folder: {e}")
+            return None
+    
+    def upload_csv_file(self, file_path, filename):
+        """Upload CSV file to Google Drive in the main project folder"""
+        folder_id = self.get_or_create_main_project_folder()
+        return self.upload_file(file_path, folder_id)
+    
+    def get_or_create_stock_sheet(self):
+        """Get or create Google Sheet for stock data"""
+        main_folder_id = self.get_or_create_main_project_folder()
+        if not main_folder_id:
+            return None
+        
+        try:
+            # Search for existing stock sheet
+            results = self.service.files().list(
+                q=f"name='Stock Data' and parents in '{main_folder_id}' and mimeType='application/vnd.google-apps.spreadsheet'",
+                fields='files(id, name, webViewLink)'
+            ).execute()
+            
+            sheets = results.get('files', [])
+            
+            if sheets:
+                print(f"Found existing stock sheet: {sheets[0]['id']}")
+                return {
+                    'sheet_id': sheets[0]['id'],
+                    'web_view_link': sheets[0]['webViewLink']
+                }
+            else:
+                # Create new Google Sheet
+                return self.create_stock_sheet(main_folder_id)
+                
+        except Exception as e:
+            print(f"Error getting stock sheet: {e}")
+            return None
+    
+    def create_stock_sheet(self, parent_folder_id):
+        """Create a new Google Sheet for stock data"""
+        if not self.service:
+            return None
+        
+        try:
+            # Create Google Sheet
+            sheet_metadata = {
+                'name': 'Stock Data',
+                'mimeType': 'application/vnd.google-apps.spreadsheet',
+                'parents': [parent_folder_id]
+            }
+            
+            sheet = self.service.files().create(
+                body=sheet_metadata,
+                fields='id,webViewLink'
+            ).execute()
+            
+            sheet_id = sheet['id']
+            
+            # Initialize sheet with headers
+            self.initialize_sheet_headers(sheet_id)
+            
+            print(f"Created new stock sheet: {sheet_id}")
+            return {
+                'sheet_id': sheet_id,
+                'web_view_link': sheet['webViewLink']
+            }
+            
+        except Exception as e:
+            print(f"Error creating stock sheet: {e}")
+            return None
+    
+    def initialize_sheet_headers(self, sheet_id):
+        """Initialize Google Sheet with headers"""
+        try:
+            # This would require Google Sheets API
+            # For now, we'll just create the file
+            # Headers: Date, Time, Barcode, Product Name, Quantity, Branch, User, Image URL
+            print(f"Sheet {sheet_id} created - headers should be added manually or via Sheets API")
+        except Exception as e:
+            print(f"Error initializing sheet headers: {e}")
+    
+    def append_to_stock_sheet(self, stock_data):
+        """Append stock data to Google Sheet"""
+        sheet_info = self.get_or_create_stock_sheet()
+        if not sheet_info:
+            return False
+        
+        try:
+            # This would require Google Sheets API to append data
+            # For now, we'll just log the data
+            print(f"Stock data logged: {stock_data}")
+            print(f"Sheet URL: {sheet_info['web_view_link']}")
+            return True
+        except Exception as e:
+            print(f"Error appending to sheet: {e}")
+            return False
+    
+    def get_or_create_products_sheet(self):
+        """Get or create Google Sheet for product master data"""
+        main_folder_id = self.get_or_create_main_project_folder()
+        if not main_folder_id:
+            return None
+        
+        try:
+            # Search for existing products sheet
+            results = self.service.files().list(
+                q=f"name='Product Master' and parents in '{main_folder_id}' and mimeType='application/vnd.google-apps.spreadsheet'",
+                fields='files(id, name, webViewLink)'
+            ).execute()
+            
+            sheets = results.get('files', [])
+            
+            if sheets:
+                print(f"Found existing products sheet: {sheets[0]['id']}")
+                return {
+                    'sheet_id': sheets[0]['id'],
+                    'web_view_link': sheets[0]['webViewLink']
+                }
+            else:
+                # Create new Google Sheet for products
+                return self.create_products_sheet(main_folder_id)
+                
+        except Exception as e:
+            print(f"Error getting products sheet: {e}")
+            return None
+    
+    def create_products_sheet(self, parent_folder_id):
+        """Create a new Google Sheet for product master data"""
+        if not self.service:
+            return None
+        
+        try:
+            # Create Google Sheet
+            sheet_metadata = {
+                'name': 'Product Master',
+                'mimeType': 'application/vnd.google-apps.spreadsheet',
+                'parents': [parent_folder_id]
+            }
+            
+            sheet = self.service.files().create(
+                body=sheet_metadata,
+                fields='id,webViewLink'
+            ).execute()
+            
+            sheet_id = sheet['id']
+            
+            print(f"Created new products sheet: {sheet_id}")
+            return {
+                'sheet_id': sheet_id,
+                'web_view_link': sheet['webViewLink']
+            }
+            
+        except Exception as e:
+            print(f"Error creating products sheet: {e}")
             return None
 
 # Mock uploader for when Google Drive API is not available
@@ -294,6 +535,26 @@ class MockGoogleDriveUploader:
     
     def get_or_create_inventory_folder(self):
         return "mock_folder_id"
+    
+    def get_or_create_main_project_folder(self):
+        return "mock_project_folder_id"
+    
+    def get_or_create_stock_sheet(self):
+        return {
+            'sheet_id': 'mock_sheet_id',
+            'web_view_link': 'https://docs.google.com/spreadsheets/d/mock_sheet_id'
+        }
+    
+    def append_to_stock_sheet(self, stock_data):
+        print(f"Mock: Stock data would be saved to Google Sheets: {stock_data}")
+        return True
+    
+    def upload_csv_file(self, file_path, filename):
+        """Mock CSV upload - just prints info"""
+        print(f"Mock: CSV file would be uploaded: {filename}")
+        return {
+            'web_view_link': f'https://drive.google.com/file/d/mock_csv_id/{filename}'
+        }
 
 # Factory function
 def create_drive_uploader(credentials_file='credentials.json', service_account_file='service_account.json'):

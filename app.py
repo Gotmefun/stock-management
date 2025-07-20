@@ -1,110 +1,102 @@
-from flask import Flask, request, render_template, redirect, url_for, session, flash, jsonify
-import sqlite3
+from flask import Flask, request, render_template, redirect, url_for, session, flash, jsonify, send_from_directory
 import hashlib
 from datetime import datetime, timedelta
 import os
 from functools import wraps
 from upload_to_drive import create_drive_uploader
+from sheets_manager import create_sheets_manager
+from oauth_manager import oauth_drive_manager
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-this-in-production'
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 
-DATABASE = 'inventory.db'
+# Google Sheets IDs - Update these with your actual sheet IDs
+PRODUCT_SHEET_ID = os.environ.get('PRODUCT_SHEET_ID', '17fQBTqiUG6tFH-67its-iaKDV2ef4HLJ9S3BGKTVSdM')
+STOCK_SHEET_ID = os.environ.get('STOCK_SHEET_ID', '1OaEqOS7I0_hN2Q1nc4isqPXXdjp7_i7ZAPJFhUr5X7k')
 
-# Initialize Google Drive uploader
-drive_uploader = create_drive_uploader()
+# Initialize Google Drive uploader and Sheets manager
+try:
+    drive_uploader = create_drive_uploader()
+    sheets_manager = create_sheets_manager()
+    print(f"Drive uploader type: {type(drive_uploader)}")
+    print(f"Sheets manager type: {type(sheets_manager)}")
+except Exception as e:
+    print(f"Failed to initialize Google services: {e}")
+    from upload_to_drive import MockGoogleDriveUploader
+    drive_uploader = MockGoogleDriveUploader()
+    sheets_manager = None
 
-def get_db():
-    """Get database connection"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Simple user authentication (in production, use proper authentication)
+USERS = {
+    'admin': {'password': hashlib.sha256('admin123'.encode()).hexdigest(), 'role': 'admin'},
+    'staff': {'password': hashlib.sha256('staff123'.encode()).hexdigest(), 'role': 'staff'}
+}
 
-def init_db():
-    """Initialize database with tables"""
-    with get_db() as conn:
-        conn.executescript('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                role TEXT NOT NULL CHECK (role IN ('admin', 'staff'))
-            );
+# Google Apps Script Web App URL - ใส่ URL ที่ได้จาก deployment
+APPS_SCRIPT_URL = os.environ.get('APPS_SCRIPT_URL', 'https://script.google.com/macros/s/AKfycbxaVXe5bMs7tw8n5iUZ_l4D4aeGJk-bEFT-QNpTe87XXGRvwhBCB4go9u9e9ddJ364/exec')
+
+def upload_via_apps_script(image_data, filename):
+    """Upload image via Google Apps Script"""
+    if APPS_SCRIPT_URL == 'YOUR_APPS_SCRIPT_URL_HERE':
+        print("Apps Script URL not configured")
+        return None
+    
+    try:
+        import requests
+        import json
+        
+        payload = {
+            'imageData': image_data,
+            'filename': filename
+        }
+        
+        print(f"Sending image to Apps Script: {filename}")
+        response = requests.post(
+            APPS_SCRIPT_URL,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('success'):
+                print(f"Apps Script upload successful: {result.get('webViewLink')}")
+                return result.get('webViewLink')
+            else:
+                print(f"Apps Script upload failed: {result.get('error')}")
+                return None
+        else:
+            print(f"Apps Script request failed: {response.status_code}")
+            return None
             
-            CREATE TABLE IF NOT EXISTS products (
-                barcode TEXT PRIMARY KEY,
-                product_name TEXT NOT NULL
-            );
-            
-            CREATE TABLE IF NOT EXISTS stock_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT NOT NULL,
-                product_name TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                branch TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                image_url TEXT,
-                created_by_user_id INTEGER,
-                FOREIGN KEY (created_by_user_id) REFERENCES users (id),
-                FOREIGN KEY (barcode) REFERENCES products (barcode)
-            );
-            
-            CREATE TABLE IF NOT EXISTS sales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT NOT NULL,
-                quantity_sold INTEGER NOT NULL,
-                date DATE NOT NULL,
-                FOREIGN KEY (barcode) REFERENCES products (barcode)
-            );
-        ''')
+    except Exception as e:
+        print(f"Error uploading via Apps Script: {e}")
+        return None
+
+def init_sheets():
+    """Initialize Google Sheets with headers and sample data if needed"""
+    if not sheets_manager:
+        print("Sheets manager not available")
+        return
+    
+    try:
+        # Initialize headers for both sheets
+        print("Initializing Product Master sheet headers...")
+        sheets_manager.initialize_product_sheet_headers(PRODUCT_SHEET_ID)
         
-        # Insert sample data
-        # Sample users
-        admin_password = hashlib.sha256('admin123'.encode()).hexdigest()
-        staff_password = hashlib.sha256('staff123'.encode()).hexdigest()
+        print("Initializing Stock Counting sheet headers...")  
+        sheets_manager.initialize_stock_sheet_headers(STOCK_SHEET_ID)
         
-        conn.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)',
-                    ('admin', admin_password, 'admin'))
-        conn.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)',
-                    ('staff', staff_password, 'staff'))
+        # Add sample products if sheet is empty
+        products = sheets_manager.get_all_products(PRODUCT_SHEET_ID)
+        if len(products) == 0:
+            print("Adding sample products...")
+            sheets_manager.add_sample_products(PRODUCT_SHEET_ID)
         
-        # Sample products
-        sample_products = [
-            ('1234567890123', 'น้ำดื่ม 600ml'),
-            ('2345678901234', 'ข้าวสาร 5kg'),
-            ('3456789012345', 'นมถั่วเหลือง 250ml'),
-            ('4567890123456', 'ขนมปังแผ่น'),
-            ('5678901234567', 'ไข่ไก่ 10 ฟอง'),
-            ('6789012345678', 'น้ำตาลทราย 1kg'),
-            ('7890123456789', 'น้ำปลา 700ml'),
-            ('8901234567890', 'ข้าวโพดกระป๋อง'),
-            ('9012345678901', 'ผงซักฟอก 3kg'),
-            ('0123456789012', 'ยาสีฟัน 160g')
-        ]
+        print("Google Sheets initialized successfully")
         
-        for barcode, name in sample_products:
-            conn.execute('INSERT OR IGNORE INTO products (barcode, product_name) VALUES (?, ?)',
-                        (barcode, name))
-        
-        # Sample sales data
-        from datetime import date, timedelta
-        today = date.today()
-        
-        sample_sales = [
-            ('1234567890123', 15, today - timedelta(days=1)),
-            ('2345678901234', 5, today - timedelta(days=2)),
-            ('3456789012345', 25, today - timedelta(days=1)),
-            ('4567890123456', 8, today - timedelta(days=3)),
-            ('5678901234567', 12, today - timedelta(days=1)),
-            ('6789012345678', 3, today - timedelta(days=5)),
-            ('7890123456789', 7, today - timedelta(days=2)),
-            ('8901234567890', 20, today - timedelta(days=1)),
-            # No sales for last 2 products to test slow-moving report
-        ]
-        
-        for barcode, qty, sale_date in sample_sales:
-            conn.execute('INSERT OR IGNORE INTO sales (barcode, quantity_sold, date) VALUES (?, ?, ?)',
-                        (barcode, qty, sale_date))
+    except Exception as e:
+        print(f"Error initializing sheets: {e}")
 
 def login_required(f):
     """Decorator to require login"""
@@ -122,11 +114,9 @@ def admin_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         
-        with get_db() as conn:
-            user = conn.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-            if not user or user['role'] != 'admin':
-                flash('Access denied. Admin privileges required.', 'error')
-                return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -137,11 +127,9 @@ def staff_required(f):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         
-        with get_db() as conn:
-            user = conn.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-            if not user or user['role'] != 'staff':
-                flash('Access denied. Staff privileges required.', 'error')
-                return redirect(url_for('login'))
+        if session.get('role') not in ['staff', 'admin']:
+            flash('Access denied. Staff privileges required.', 'error')
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -153,21 +141,18 @@ def login():
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         
-        with get_db() as conn:
-            user = conn.execute('SELECT id, username, role FROM users WHERE username = ? AND password = ?',
-                              (username, hashed_password)).fetchone()
+        # Check against USERS dictionary
+        if username in USERS and USERS[username]['password'] == hashed_password:
+            session['user_id'] = username
+            session['username'] = username
+            session['role'] = USERS[username]['role']
             
-            if user:
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['role'] = user['role']
-                
-                if user['role'] == 'admin':
-                    return redirect(url_for('admin_summary'))
-                else:
-                    return redirect(url_for('index'))
+            if USERS[username]['role'] == 'admin':
+                return redirect(url_for('admin_summary'))
             else:
-                flash('Invalid username or password', 'error')
+                return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
     
     return render_template('login.html')
 
@@ -175,6 +160,84 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/authorize_drive')
+@login_required
+def authorize_drive():
+    """Redirect user to Google OAuth2 authorization"""
+    try:
+        print("=== Starting OAuth2 authorization ===")
+        auth_url = oauth_drive_manager.get_authorization_url()
+        print(f"Generated auth URL: {auth_url[:100]}...")
+        return redirect(auth_url)
+    except Exception as e:
+        print(f"OAuth authorization error: {e}")
+        flash(f'Authorization error: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    """Handle OAuth2 callback"""
+    print("=== OAuth2 Callback Endpoint ===")
+    print(f"Request URL: {request.url}")
+    print(f"Request args: {dict(request.args)}")
+    print(f"Request method: {request.method}")
+    
+    authorization_code = request.args.get('code')
+    error = request.args.get('error')
+    state = request.args.get('state')
+    
+    print(f"Authorization code: {authorization_code[:20] if authorization_code else 'None'}...")
+    print(f"Error: {error}")
+    print(f"State: {state}")
+    
+    if error:
+        print(f"OAuth error received: {error}")
+        flash(f'Authorization error: {error}', 'error')
+        return redirect(url_for('index'))
+    
+    if authorization_code:
+        print(f"Processing authorization code: {authorization_code[:20]}...")
+        try:
+            success = oauth_drive_manager.handle_oauth_callback(authorization_code)
+            print(f"OAuth callback result: {success}")
+            
+            if success:
+                print("OAuth callback successful!")
+                flash('Google Drive authorization successful!', 'success')
+                
+                # Verify token file exists after callback
+                import os
+                token_file = 'drive_token.pickle'
+                if os.path.exists(token_file):
+                    file_size = os.path.getsize(token_file)
+                    print(f"Token file verified: {token_file}, size: {file_size} bytes")
+                else:
+                    print(f"WARNING: Token file not found after successful callback: {token_file}")
+            else:
+                print("OAuth callback failed!")
+                flash('Google Drive authorization failed!', 'error')
+        except Exception as callback_error:
+            print(f"Exception in callback processing: {callback_error}")
+            import traceback
+            traceback.print_exc()
+            flash('Google Drive authorization failed!', 'error')
+    else:
+        print("No authorization code received")
+        flash('Authorization cancelled', 'error')
+    
+    print("=== Redirecting to index ===")
+    return redirect(url_for('index'))
+
+@app.route('/drive_status')
+@login_required
+def drive_status():
+    """Check Google Drive authorization status"""
+    is_authorized = oauth_drive_manager.is_authorized()
+    return jsonify({
+        'authorized': is_authorized,
+        'message': 'Google Drive is authorized' if is_authorized else 'Google Drive not authorized'
+    })
 
 @app.route('/')
 @staff_required
@@ -184,141 +247,165 @@ def index():
 @app.route('/get_product/<barcode>')
 @login_required
 def get_product(barcode):
-    with get_db() as conn:
-        product = conn.execute('SELECT * FROM products WHERE barcode = ?', (barcode,)).fetchone()
+    if not sheets_manager:
+        return jsonify({'error': 'Sheets manager not available'}), 500
+    
+    try:
+        print(f"Looking for barcode: {barcode}")
+        product = sheets_manager.get_product_by_barcode(barcode, PRODUCT_SHEET_ID)
+        print(f"Found product: {product}")
+        
         if product:
-            return jsonify({
-                'barcode': product['barcode'],
-                'product_name': product['product_name']
-            })
+            return jsonify(product)
         else:
             return jsonify({'error': 'Product not found'}), 404
+    except Exception as e:
+        print(f"Error in get_product: {e}")
+        return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 @app.route('/submit_stock', methods=['POST'])
 @staff_required
 def submit_stock():
     data = request.get_json()
     
+    if not sheets_manager:
+        return jsonify({'error': 'Sheets manager not available'}), 500
+    
     image_url = ''
     
     # Handle image upload if present
     if 'image_data' in data and data['image_data']:
+        print(f"Image data received, length: {len(data['image_data'])}")
         try:
             # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"stock_{data['barcode']}_{timestamp}.jpg"
+            print(f"Uploading image with filename: {filename}")
             
-            # Upload to Google Drive
-            upload_result = drive_uploader.upload_image_from_base64(
-                data['image_data'], 
-                filename,
-                drive_uploader.get_or_create_inventory_folder()
-            )
-            
+            # Try Google Apps Script upload first (easier than OAuth2)
+            upload_result = upload_via_apps_script(data['image_data'], filename)
             if upload_result:
-                image_url = upload_result['web_view_link']
-                print(f"Image uploaded successfully: {image_url}")
+                image_url = upload_result
+                print(f"Apps Script upload successful: {image_url}")
             else:
-                print("Failed to upload image")
+                print("Apps Script upload failed - trying OAuth2...")
+                
+                # Fallback to OAuth2 if Apps Script fails
+                if oauth_drive_manager.is_authorized():
+                    try:
+                        # Get or create folder path
+                        folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
+                        
+                        # Upload to Google Drive
+                        oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
+                            data['image_data'], 
+                            filename,
+                            folder_id
+                        )
+                        
+                        if oauth_upload_result:
+                            image_url = oauth_upload_result['web_view_link']
+                            print(f"OAuth2 upload successful: {image_url}")
+                        else:
+                            print("OAuth2 upload failed")
+                            
+                    except Exception as oauth_error:
+                        print(f"OAuth2 upload error: {oauth_error}")
+                else:
+                    print("Google Drive not authorized")
+            
+            if not image_url:
+                print("Google Drive upload failed - saving locally as backup")
+                # Fallback to local storage
+                import os
+                import base64
+                
+                os.makedirs('uploads', exist_ok=True)
+                image_data_clean = data['image_data']
+                if image_data_clean.startswith('data:'):
+                    image_data_clean = image_data_clean.split(',')[1]
+                
+                image_bytes = base64.b64decode(image_data_clean)
+                local_path = os.path.join('uploads', filename)
+                
+                with open(local_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                image_url = f"local://{local_path}"
+                print(f"Using local backup: {image_url}")
                 
         except Exception as e:
             print(f"Error uploading image: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("No image data received or image data is empty")
     
-    with get_db() as conn:
-        conn.execute('''
-            INSERT INTO stock_log (barcode, product_name, quantity, branch, image_url, created_by_user_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (data['barcode'], data['product_name'], data['quantity'], 
-              data['branch'], image_url, session['user_id']))
+    # Prepare stock data for Google Sheets
+    stock_data = {
+        'barcode': data['barcode'],
+        'product_name': data['product_name'],
+        'quantity': data['quantity'],
+        'branch': data['branch'],
+        'user': session.get('username', 'Unknown'),
+        'image_url': image_url,
+        'counter_name': data.get('counter_name', 'Unknown')
+    }
+    
+    # Save to Google Sheets
+    try:
+        success = sheets_manager.add_stock_record(stock_data, STOCK_SHEET_ID)
+        if success:
+            print("Stock data saved to Google Sheets successfully")
+        else:
+            print("Failed to save stock data to Google Sheets")
+    except Exception as e:
+        print(f"Error saving to Google Sheets: {e}")
+        return jsonify({'error': 'Failed to save stock data'}), 500
     
     return jsonify({'success': True})
-
-@app.route('/sync_sales')
-@admin_required
-def sync_sales():
-    # This would typically run the sync_sales.py script
-    flash('Sales data sync completed successfully', 'success')
-    return redirect(url_for('admin_summary'))
 
 @app.route('/report/summary')
 @admin_required
 def admin_summary():
-    with get_db() as conn:
-        # Get stock data with sales analysis
-        query = '''
-            SELECT 
-                p.barcode,
-                p.product_name,
-                COALESCE(sl.total_stock, 0) as total_stock,
-                COALESCE(s.total_sold_30days, 0) as sold_30days,
-                COALESCE(s.total_sold_7days, 0) as sold_7days,
-                CASE 
-                    WHEN COALESCE(s.total_sold_30days, 0) > 0 
-                    THEN COALESCE(sl.total_stock, 0) * 30.0 / s.total_sold_30days 
-                    ELSE 999 
-                END as days_of_stock,
-                CASE 
-                    WHEN COALESCE(s.total_sold_30days, 0) > 0 
-                    THEN GREATEST(0, s.total_sold_30days * 1.5 - COALESCE(sl.total_stock, 0))
-                    ELSE 0 
-                END as suggested_order
-            FROM products p
-            LEFT JOIN (
-                SELECT barcode, SUM(quantity) as total_stock
-                FROM stock_log
-                GROUP BY barcode
-            ) sl ON p.barcode = sl.barcode
-            LEFT JOIN (
-                SELECT 
-                    barcode,
-                    SUM(CASE WHEN date >= date('now', '-30 days') THEN quantity_sold ELSE 0 END) as total_sold_30days,
-                    SUM(CASE WHEN date >= date('now', '-7 days') THEN quantity_sold ELSE 0 END) as total_sold_7days
-                FROM sales
-                GROUP BY barcode
-            ) s ON p.barcode = s.barcode
-            ORDER BY days_of_stock ASC
-        '''
-        
-        products = conn.execute(query).fetchall()
-        
-        # Get branch summary
-        branch_summary = conn.execute('''
-            SELECT branch, COUNT(*) as items_counted, SUM(quantity) as total_quantity
-            FROM stock_log
-            GROUP BY branch
-        ''').fetchall()
+    if not sheets_manager:
+        flash('Sheets manager not available', 'error')
+        return redirect(url_for('index'))
     
-    return render_template('summary.html', products=products, branch_summary=branch_summary)
+    try:
+        # Get stock summary from Google Sheets
+        products = sheets_manager.get_stock_summary(STOCK_SHEET_ID, PRODUCT_SHEET_ID)
+        
+        # For now, we'll show basic stock summary
+        # In the future, you could integrate with sales data from another sheet
+        return render_template('summary.html', products=products, branch_summary=[])
+        
+    except Exception as e:
+        print(f"Error getting summary: {e}")
+        flash('Error loading summary data', 'error')
+        return redirect(url_for('index'))
 
-@app.route('/report/slow')
+@app.route('/report/products')
 @admin_required
-def slow_moving():
-    with get_db() as conn:
-        # Get products with no sales in last 30 days
-        slow_products = conn.execute('''
-            SELECT 
-                p.barcode,
-                p.product_name,
-                COALESCE(sl.total_stock, 0) as total_stock,
-                COALESCE(s.last_sale_date, 'Never') as last_sale_date
-            FROM products p
-            LEFT JOIN (
-                SELECT barcode, SUM(quantity) as total_stock
-                FROM stock_log
-                GROUP BY barcode
-            ) sl ON p.barcode = sl.barcode
-            LEFT JOIN (
-                SELECT barcode, MAX(date) as last_sale_date
-                FROM sales
-                GROUP BY barcode
-            ) s ON p.barcode = s.barcode
-            WHERE s.barcode IS NULL 
-               OR s.last_sale_date < date('now', '-30 days')
-            ORDER BY p.product_name
-        ''').fetchall()
+def view_products():
+    if not sheets_manager:
+        flash('Sheets manager not available', 'error')
+        return redirect(url_for('index'))
     
-    return render_template('slow.html', products=slow_products)
+    try:
+        products = sheets_manager.get_all_products(PRODUCT_SHEET_ID)
+        return render_template('products.html', products=products)
+        
+    except Exception as e:
+        print(f"Error getting products: {e}")
+        flash('Error loading products data', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
+    init_sheets()
+    app.run(host='127.0.0.1', port=8080, debug=True)

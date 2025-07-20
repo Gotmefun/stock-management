@@ -25,6 +25,7 @@ function initializeApp() {
     loadRecentScans();
 }
 
+
 function toggleScanner() {
     const button = document.getElementById('scanner-toggle');
     const qrReader = document.getElementById('qr-reader');
@@ -173,11 +174,20 @@ function startCamera() {
 }
 
 function takePhoto() {
+    console.log('takePhoto function called');
+    
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const photo = document.getElementById('photo');
     const takeButton = document.getElementById('take-photo');
     const retakeButton = document.getElementById('retake-photo');
+    
+    console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+    
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.error('Video not ready or no dimensions');
+        return;
+    }
     
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -186,6 +196,8 @@ function takePhoto() {
     context.drawImage(video, 0, 0);
     
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    console.log('Image data generated, length:', imageData.length);
+    console.log('Image data preview:', imageData.substring(0, 50) + '...');
     
     photo.src = imageData;
     photo.style.display = 'block';
@@ -193,6 +205,8 @@ function takePhoto() {
     
     takeButton.disabled = true;
     retakeButton.disabled = false;
+    
+    console.log('Photo taken and UI updated');
     
     // Stop camera stream
     if (stream) {
@@ -223,17 +237,36 @@ function handleSubmit(event) {
         barcode: formData.get('barcode'),
         quantity: parseInt(formData.get('quantity')),
         branch: formData.get('branch'),
-        product_name: document.getElementById('product-name').textContent
+        product_name: document.getElementById('product-name').textContent,
+        counter_name: formData.get('counter_name')
     };
+    
+    // Debug logging
+    console.log('Form data:', data);
+    console.log('Product name element:', document.getElementById('product-name'));
+    console.log('Product name text:', data.product_name);
     
     // Add image data if photo was taken
     const photo = document.getElementById('photo');
+    console.log('Photo element:', photo);
+    console.log('Photo src:', photo.src);
+    console.log('Photo src starts with data:', photo.src && photo.src.startsWith('data:'));
+    
     if (photo.src && photo.src.startsWith('data:')) {
         data.image_data = photo.src;
+        console.log('Image data added, length:', photo.src.length);
+    } else {
+        console.log('No image data to add');
     }
     
     // Validate required fields
     if (!data.barcode || !data.quantity || !data.branch || !data.product_name) {
+        console.log('Validation failed:', {
+            barcode: !!data.barcode,
+            quantity: !!data.quantity, 
+            branch: !!data.branch,
+            product_name: !!data.product_name
+        });
         showAlert('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
         return;
     }
@@ -246,6 +279,8 @@ function submitStockData(data) {
     const submitButton = document.getElementById('submit-btn');
     submitButton.disabled = true;
     submitButton.textContent = 'กำลังบันทึก...';
+    
+    console.log('Submitting to server:', data);
     
     fetch('/submit_stock', {
         method: 'POST',
