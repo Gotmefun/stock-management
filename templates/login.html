@@ -100,30 +100,13 @@
             border: 1px solid #ffcdd2;
         }
         
-        .demo-info {
-            margin-top: 2rem;
-            padding: 1rem;
-            background: #f5f5f5;
-            border-radius: 5px;
-            font-size: 0.9rem;
-        }
-        
-        .demo-info h3 {
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-        
-        .demo-info p {
-            color: #666;
-            margin-bottom: 0.25rem;
-        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
             <h1>เข้าสู่ระบบ</h1>
-            <p>ระบบจัดการสต๊อกและวิเคราะห์การขาย</p>
+            <p>มาตรวจนับสินค้ากันเถอะ</p>
         </div>
         
         {% with messages = get_flashed_messages() %}
@@ -148,11 +131,6 @@
             <button type="submit" class="btn">เข้าสู่ระบบ</button>
         </form>
         
-        <div class="demo-info">
-            <h3>ข้อมูลสำหรับทดสอบ:</h3>
-            <p><strong>Admin:</strong> username: admin, password: admin123</p>
-            <p><strong>Staff:</strong> username: staff, password: staff123</p>
-        </div>
     </div>
 </body>
 </html>
