@@ -1,5 +1,5 @@
 Flask==2.3.3
-pandas==2.1.1
+pandas==1.5.3  # เสถียรกว่า และใช้กับ Python 3.7-3.10 ได้แน่
 google-api-python-client==2.103.0
 google-auth-oauthlib==1.0.0
 google-auth==2.23.3
