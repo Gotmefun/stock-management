@@ -28,7 +28,7 @@ except Exception as e:
 
 # Simple user authentication (in production, use proper authentication)
 USERS = {
-    'admin': {'password': hashlib.sha256('admin123'.encode()).hexdigest(), 'role': 'admin'},
+    'admin': {'password': hashlib.sha256('Teeomega2014'.encode()).hexdigest(), 'role': 'admin'},
     'staff': {'password': hashlib.sha256('staff123'.encode()).hexdigest(), 'role': 'staff'}
 }
 
