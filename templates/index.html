@@ -39,6 +39,31 @@
             gap: 1rem;
         }
         
+        .admin-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .admin-menu a {
+            background: #28a745;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-menu a:hover {
+            background: #218838;
+        }
+        
+        .admin-menu a.current {
+            background: #17a2b8;
+        }
+        
         .logout-btn {
             background: #dc3545;
             color: white;
@@ -292,7 +317,14 @@
     <div class="header">
         <h1>นับสต๊อกสินค้า</h1>
         <div class="user-info">
-            <span>ผู้ใช้: {{ session.username }}</span>
+            {% if session.role == 'admin' %}
+            <div class="admin-menu">
+                <a href="{{ url_for('index') }}" class="current">📱 นับสต๊อก</a>
+                <a href="{{ url_for('admin_summary') }}">📊 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}">📋 รายการสินค้า</a>
+            </div>
+            {% endif %}
+            <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
             <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
         </div>
     </div>

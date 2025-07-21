@@ -32,38 +32,49 @@
             color: #333;
         }
         
-        .nav-links {
+        .user-info {
             display: flex;
+            align-items: center;
             gap: 1rem;
         }
         
-        .nav-links a {
-            background: #667eea;
+        .admin-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .admin-menu a {
+            background: #28a745;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-menu a:hover {
+            background: #218838;
+        }
+        
+        .admin-menu a.current {
+            background: #17a2b8;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
             color: white;
             padding: 0.5rem 1rem;
+            border: none;
             border-radius: 5px;
             text-decoration: none;
             font-size: 0.9rem;
         }
         
-        .nav-links a:hover {
-            background: #5a6fd8;
-        }
-        
-        .nav-links a.danger {
-            background: #dc3545;
-        }
-        
-        .nav-links a.danger:hover {
+        .logout-btn:hover {
             background: #c82333;
-        }
-        
-        .nav-links a.secondary {
-            background: #6c757d;
-        }
-        
-        .nav-links a.secondary:hover {
-            background: #5a6268;
         }
         
         .summary-cards {
@@ -242,10 +253,14 @@
 <body>
     <div class="header">
         <h1>รายงานสรุปการวิเคราะห์สต๊อก</h1>
-        <div class="nav-links">
-            <a href="{{ url_for('slow_moving') }}">สินค้าไม่เคลื่อนไหว</a>
-            <a href="{{ url_for('sync_sales') }}" class="secondary">ซิงค์ยอดขาย</a>
-            <a href="{{ url_for('logout') }}" class="danger">ออกจากระบบ</a>
+        <div class="user-info">
+            <div class="admin-menu">
+                <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
+                <a href="{{ url_for('admin_summary') }}" class="current">📊 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}">📋 รายการสินค้า</a>
+            </div>
+            <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
         </div>
     </div>
     

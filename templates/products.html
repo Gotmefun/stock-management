@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายการสินค้า - ระบบจัดการสต๊อก</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 1rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .admin-menu a {
+            background: #28a745;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-menu a:hover {
+            background: #218838;
+        }
+        
+        .admin-menu a.current {
+            background: #17a2b8;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .products-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .products-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .products-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .no-products {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .admin-menu {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+            
+            .products-table {
+                font-size: 0.9rem;
+            }
+            
+            .products-table th,
+            .products-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>รายการสินค้า</h1>
+        <div class="user-info">
+            <div class="admin-menu">
+                <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
+                <a href="{{ url_for('admin_summary') }}">📊 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}" class="current">📋 รายการสินค้า</a>
+            </div>
+            <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
+        </div>
+    </div>
+    
+    <div class="products-container">
+        <h2>รายการสินค้าทั้งหมด</h2>
+        
+        <input type="text" id="searchBox" class="search-box" placeholder="ค้นหาสินค้า (บาร์โค้ดหรือชื่อสินค้า)..." onkeyup="filterProducts()">
+        
+        {% if products and products|length > 0 %}
+        <table class="products-table" id="productsTable">
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>บาร์โค้ด</th>
+                    <th>ชื่อสินค้า</th>
+                    <th>หมวดหมู่</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ product.get('barcode', 'N/A') }}</strong></td>
+                    <td>{{ product.get('product_name', 'N/A') }}</td>
+                    <td>{{ product.get('category', '-') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-products">
+            <h3>ไม่พบข้อมูลสินค้า</h3>
+            <p>กรุณาตรวจสอบการเชื่อมต่อกับ Google Sheets หรือเพิ่มข้อมูลสินค้าใน Product Master Sheet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function filterProducts() {
+            const searchBox = document.getElementById('searchBox');
+            const filter = searchBox.value.toLowerCase();
+            const table = document.getElementById('productsTable');
+            
+            if (!table) return;
+            
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) { // Skip header row
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 1; j < cells.length; j++) { // Skip index column
+                    if (cells[j].textContent.toLowerCase().includes(filter)) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>
