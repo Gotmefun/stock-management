@@ -368,21 +368,27 @@ def submit_stock():
 @app.route('/report/summary')
 @admin_required
 def admin_summary():
+    print("=== Admin Summary Route Called ===")
+    
     if not sheets_manager:
+        print("ERROR: Sheets manager not available")
         flash('Sheets manager not available', 'error')
         return redirect(url_for('index'))
     
     try:
-        # Get stock summary from Google Sheets
+        print(f"Getting stock summary from sheets: {STOCK_SHEET_ID}, {PRODUCT_SHEET_ID}")
         products = sheets_manager.get_stock_summary(STOCK_SHEET_ID, PRODUCT_SHEET_ID)
+        print(f"Retrieved {len(products) if products else 0} products")
         
         # For now, we'll show basic stock summary
         # In the future, you could integrate with sales data from another sheet
         return render_template('summary.html', products=products, branch_summary=[])
         
     except Exception as e:
-        print(f"Error getting summary: {e}")
-        flash('Error loading summary data', 'error')
+        print(f"ERROR in admin_summary: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error loading summary data: {str(e)}', 'error')
         return redirect(url_for('index'))
 
 @app.route('/report/products')
