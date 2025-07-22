@@ -114,24 +114,39 @@ class SupabaseManager:
     def add_stock_count(self, count_data: Dict) -> bool:
         """Add stock count record"""
         try:
-            # Add timestamp if not provided
+            # Ensure all required fields are present
             if 'counted_at' not in count_data:
                 count_data['counted_at'] = datetime.now().isoformat()
             
+            # Validate required fields
+            required_fields = ['product_id', 'branch_id', 'counted_quantity']
+            for field in required_fields:
+                if field not in count_data:
+                    print(f"Missing required field: {field}")
+                    return False
+            
+            print(f"Inserting stock count data: {count_data}")
             response = self.client.table('stock_counts').insert(count_data).execute()
             
-            # Update inventory with counted quantity
+            # Update inventory with counted quantity if insert successful
             if response.data:
-                self.update_inventory(
-                    count_data['product_id'],
-                    count_data['branch_id'],
-                    count_data['counted_quantity'],
-                    count_data.get('counted_by')
-                )
+                print("Stock count inserted successfully, updating inventory...")
+                try:
+                    self.update_inventory(
+                        count_data['product_id'],
+                        count_data['branch_id'],
+                        count_data['counted_quantity'],
+                        count_data.get('counter_name')
+                    )
+                except Exception as inv_error:
+                    print(f"Warning: Failed to update inventory: {inv_error}")
+                    # Don't fail the whole operation if inventory update fails
             
             return len(response.data) > 0
         except Exception as e:
             print(f"Error adding stock count: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def get_stock_summary(self) -> List[Dict]:

@@ -307,12 +307,16 @@ def submit_stock():
             print(f"Uploading image with filename: {filename}")
             
             # Try Google Apps Script upload first (easier than OAuth2)
-            upload_result = upload_via_apps_script(data['image_data'], filename)
-            if upload_result:
-                image_url = upload_result
-                print(f"Apps Script upload successful: {image_url}")
-            else:
-                print("Apps Script upload failed - trying OAuth2...")
+            try:
+                upload_result = upload_via_apps_script(data['image_data'], filename)
+                if upload_result:
+                    image_url = upload_result
+                    print(f"Apps Script upload successful: {image_url}")
+                else:
+                    print("Apps Script upload failed - trying OAuth2...")
+            except Exception as apps_script_error:
+                print(f"Apps Script upload error: {apps_script_error}")
+                print("Trying OAuth2...")
                 
                 # Fallback to OAuth2 if Apps Script fails
                 if oauth_drive_manager.is_authorized():
@@ -378,6 +382,8 @@ def submit_stock():
                     stock_count_data = {
                         'product_id': product['id'],
                         'branch_id': branch['id'],
+                        'barcode': data['barcode'],
+                        'product_name': data['product_name'],
                         'counted_quantity': int(data['quantity']),
                         'counter_name': data.get('counter_name', 'Unknown'),
                         'image_url': image_url,

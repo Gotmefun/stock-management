@@ -255,9 +255,10 @@
         <h1>รายงานสรุปการวิเคราะห์สต๊อก</h1>
         <div class="user-info">
             <div class="admin-menu">
+                <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
                 <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
-                <a href="{{ url_for('admin_summary') }}" class="current">📊 รายงานสรุป</a>
-                <a href="{{ url_for('view_products') }}">📋 รายการสินค้า</a>
+                <a href="{{ url_for('admin_summary') }}" class="current">📋 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}">📦 รายการสินค้า</a>
             </div>
             <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
             <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>

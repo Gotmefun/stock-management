@@ -353,9 +353,10 @@
         <div class="user-info">
             {% if session.role == 'admin' %}
             <div class="admin-menu">
+                <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
                 <a href="{{ url_for('index') }}" class="current">📱 นับสต๊อก</a>
-                <a href="{{ url_for('admin_summary') }}">📊 รายงานสรุป</a>
-                <a href="{{ url_for('view_products') }}">📋 รายการสินค้า</a>
+                <a href="{{ url_for('admin_summary') }}">📋 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}">📦 รายการสินค้า</a>
             </div>
             {% endif %}
             <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
