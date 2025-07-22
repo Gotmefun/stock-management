@@ -18,7 +18,8 @@ function initializeApp() {
     document.getElementById('take-photo').addEventListener('click', takePhoto);
     document.getElementById('retake-photo').addEventListener('click', retakePhoto);
     
-    // Initialize barcode input change
+    // Initialize barcode input change (both input and change events)
+    document.getElementById('barcode').addEventListener('input', handleBarcodeChange);
     document.getElementById('barcode').addEventListener('change', handleBarcodeChange);
     
     // Load recent scans from localStorage
@@ -129,7 +130,9 @@ function fetchProductInfo(barcode) {
 }
 
 function showProductInfo(product) {
-    document.getElementById('product-name').textContent = product.product_name;
+    // Handle both API response formats: product.name or product.product_name
+    const productName = product.name || product.product_name || 'ชื่อสินค้าไม่ระบุ';
+    document.getElementById('product-name').textContent = productName;
     document.getElementById('product-barcode').textContent = product.barcode;
     document.getElementById('product-info').style.display = 'block';
 }

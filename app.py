@@ -6,6 +6,7 @@ from functools import wraps
 from upload_to_drive import create_drive_uploader
 from sheets_manager import create_sheets_manager
 from oauth_manager import oauth_drive_manager
+from supabase_manager import create_supabase_manager
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -14,17 +15,20 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-pr
 PRODUCT_SHEET_ID = os.environ.get('PRODUCT_SHEET_ID', '17fQBTqiUG6tFH-67its-iaKDV2ef4HLJ9S3BGKTVSdM')
 STOCK_SHEET_ID = os.environ.get('STOCK_SHEET_ID', '1OaEqOS7I0_hN2Q1nc4isqPXXdjp7_i7ZAPJFhUr5X7k')
 
-# Initialize Google Drive uploader and Sheets manager
+# Initialize Google Drive uploader, Sheets manager, and Supabase
 try:
     drive_uploader = create_drive_uploader()
     sheets_manager = create_sheets_manager()
+    supabase_manager = create_supabase_manager()
     print(f"Drive uploader type: {type(drive_uploader)}")
     print(f"Sheets manager type: {type(sheets_manager)}")
+    print(f"Supabase manager type: {type(supabase_manager)}")
 except Exception as e:
-    print(f"Failed to initialize Google services: {e}")
+    print(f"Failed to initialize services: {e}")
     from upload_to_drive import MockGoogleDriveUploader
     drive_uploader = MockGoogleDriveUploader()
     sheets_manager = None
+    supabase_manager = None
 
 # Simple user authentication (in production, use proper authentication)
 USERS = {
@@ -247,13 +251,32 @@ def index():
 @app.route('/get_product/<barcode>')
 @login_required
 def get_product(barcode):
+    # Try Supabase first, fallback to Google Sheets
+    if supabase_manager:
+        try:
+            print(f"Looking for barcode in Supabase: {barcode}")
+            product = supabase_manager.get_product_by_barcode(barcode)
+            if product:
+                print(f"Found product in Supabase: {product}")
+                return jsonify({
+                    'id': product['id'],
+                    'name': product['name'],
+                    'barcode': product['barcode'],
+                    'sku': product.get('sku', ''),
+                    'category': product.get('category', ''),
+                    'selling_price': product.get('selling_price', 0)
+                })
+        except Exception as e:
+            print(f"Error searching Supabase: {e}")
+    
+    # Fallback to Google Sheets
     if not sheets_manager:
-        return jsonify({'error': 'Sheets manager not available'}), 500
+        return jsonify({'error': 'No data source available'}), 500
     
     try:
-        print(f"Looking for barcode: {barcode}")
+        print(f"Looking for barcode in Sheets: {barcode}")
         product = sheets_manager.get_product_by_barcode(barcode, PRODUCT_SHEET_ID)
-        print(f"Found product: {product}")
+        print(f"Found product in Sheets: {product}")
         
         if product:
             return jsonify(product)
@@ -268,8 +291,9 @@ def get_product(barcode):
 def submit_stock():
     data = request.get_json()
     
-    if not sheets_manager:
-        return jsonify({'error': 'Sheets manager not available'}), 500
+    # Save to both Supabase and Google Sheets for redundancy
+    supabase_success = False
+    sheets_success = False
     
     image_url = ''
     
@@ -341,29 +365,66 @@ def submit_stock():
     else:
         print("No image data received or image data is empty")
     
-    # Prepare stock data for Google Sheets
-    stock_data = {
-        'barcode': data['barcode'],
-        'product_name': data['product_name'],
-        'quantity': data['quantity'],
-        'branch': data['branch'],
-        'user': session.get('username', 'Unknown'),
-        'image_url': image_url,
-        'counter_name': data.get('counter_name', 'Unknown')
-    }
+    # Try to save to Supabase first
+    if supabase_manager:
+        try:
+            # Get product ID from barcode
+            product = supabase_manager.get_product_by_barcode(data['barcode'])
+            if product:
+                # Get branch ID
+                branch = supabase_manager.get_branch_by_name(data['branch'])
+                if branch:
+                    # Prepare stock count data for Supabase
+                    stock_count_data = {
+                        'product_id': product['id'],
+                        'branch_id': branch['id'],
+                        'counted_quantity': int(data['quantity']),
+                        'counter_name': data.get('counter_name', 'Unknown'),
+                        'image_url': image_url,
+                        'notes': f"Counted by {session.get('username', 'Unknown')}"
+                    }
+                    
+                    supabase_success = supabase_manager.add_stock_count(stock_count_data)
+                    if supabase_success:
+                        print("Stock data saved to Supabase successfully")
+                    else:
+                        print("Failed to save stock data to Supabase")
+                else:
+                    print(f"Branch not found in Supabase: {data['branch']}")
+            else:
+                print(f"Product not found in Supabase: {data['barcode']}")
+        except Exception as e:
+            print(f"Error saving to Supabase: {e}")
     
-    # Save to Google Sheets
-    try:
-        success = sheets_manager.add_stock_record(stock_data, STOCK_SHEET_ID)
-        if success:
-            print("Stock data saved to Google Sheets successfully")
-        else:
-            print("Failed to save stock data to Google Sheets")
-    except Exception as e:
-        print(f"Error saving to Google Sheets: {e}")
-        return jsonify({'error': 'Failed to save stock data'}), 500
+    # Fallback to Google Sheets if available
+    if sheets_manager:
+        try:
+            stock_data = {
+                'barcode': data['barcode'],
+                'product_name': data['product_name'],
+                'quantity': data['quantity'],
+                'branch': data['branch'],
+                'user': session.get('username', 'Unknown'),
+                'image_url': image_url,
+                'counter_name': data.get('counter_name', 'Unknown')
+            }
+            
+            sheets_success = sheets_manager.add_stock_record(stock_data, STOCK_SHEET_ID)
+            if sheets_success:
+                print("Stock data saved to Google Sheets successfully")
+            else:
+                print("Failed to save stock data to Google Sheets")
+        except Exception as e:
+            print(f"Error saving to Google Sheets: {e}")
     
-    return jsonify({'success': True})
+    # Return success if either method worked
+    if supabase_success or sheets_success:
+        return jsonify({'success': True, 'saved_to': {
+            'supabase': supabase_success,
+            'sheets': sheets_success
+        }})
+    else:
+        return jsonify({'error': 'Failed to save stock data to any data source'}), 500
 
 @app.route('/report/summary')
 @admin_required
@@ -406,6 +467,36 @@ def view_products():
         print(f"Error getting products: {e}")
         flash('Error loading products data', 'error')
         return redirect(url_for('index'))
+
+@app.route('/dashboard')
+@admin_required
+def dashboard():
+    """Smart Inventory Dashboard - Phase 1"""
+    if not supabase_manager:
+        flash('Database not available. Using legacy system.', 'error')
+        return redirect(url_for('admin_summary'))
+    
+    try:
+        # Get filter parameters
+        branch_id = request.args.get('branch_id')
+        period = int(request.args.get('period', 30))
+        
+        # Get dashboard data
+        summary = supabase_manager.get_dashboard_summary(branch_id)
+        alerts = supabase_manager.get_active_alerts(branch_id)
+        branches = supabase_manager.get_all_branches()
+        
+        return render_template('dashboard.html', 
+                             summary=summary, 
+                             alerts=alerts, 
+                             branches=branches)
+        
+    except Exception as e:
+        print(f"Error loading dashboard: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return redirect(url_for('admin_summary'))
 
 @app.route('/favicon.ico')
 def favicon():
