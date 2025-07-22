@@ -148,9 +148,9 @@ function startCamera() {
     
     // Try back camera first, fallback to any camera
     const constraints = [
-        { video: { facingMode: { exact: "environment" } } }, // Force back camera
         { video: { facingMode: "environment" } }, // Prefer back camera
-        { video: true } // Any camera
+        { video: { facingMode: "user" } }, // Front camera
+        { video: true } // Any available camera
     ];
     
     async function tryCamera(constraintIndex = 0) {
@@ -160,15 +160,23 @@ function startCamera() {
         }
         
         try {
+            console.log(`Trying camera constraint ${constraintIndex}:`, constraints[constraintIndex]);
             const mediaStream = await navigator.mediaDevices.getUserMedia(constraints[constraintIndex]);
             stream = mediaStream;
             video.srcObject = stream;
             video.style.display = 'block';
             startButton.disabled = true;
             takeButton.disabled = false;
+            console.log(`Camera started successfully with constraint ${constraintIndex}`);
         } catch (err) {
             console.error(`Error with constraint ${constraintIndex}:`, err);
+            console.error('Error details:', {
+                name: err.name,
+                message: err.message,
+                constraint: constraints[constraintIndex]
+            });
             // Try next constraint
+            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay before retry
             tryCamera(constraintIndex + 1);
         }
     }
