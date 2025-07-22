@@ -51,7 +51,8 @@ def upload_via_apps_script(image_data, filename):
         
         payload = {
             'imageData': image_data,
-            'filename': filename
+            'filename': filename,
+            'folder': 'Check Stock Project/Pic Stock Counting'
         }
         
         print(f"Sending image to Apps Script: {filename}")
