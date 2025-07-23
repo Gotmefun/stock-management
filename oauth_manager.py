@@ -15,10 +15,9 @@ from googleapiclient.http import MediaIoBaseUpload
 import base64
 import io
 
-# OAuth2 scopes
+# OAuth2 scopes - using only drive.file to avoid verification requirement
 SCOPES = [
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/drive'
+    'https://www.googleapis.com/auth/drive.file'
 ]
 
 class OAuth2DriveManager:
