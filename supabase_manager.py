@@ -79,24 +79,23 @@ class SupabaseManager:
             print(f"Error getting inventory for branch {branch_id}: {e}")
             return []
     
-    def update_inventory(self, product_id: str, branch_id: str, quantity: int, user_id: str = None) -> bool:
-        """Update inventory quantity"""
+    def update_inventory(self, product_id: str, branch_id: str, quantity: int, user_name: str = None) -> bool:
+        """Update inventory quantity - using actual Supabase schema"""
         try:
             # Check if inventory record exists
             existing = self.client.table('inventory').select('id').eq('product_id', product_id).eq('branch_id', branch_id).execute()
             
+            # Use actual column names from Supabase
             inventory_data = {
-                'quantity': quantity,
-                'updated_at': datetime.now().isoformat(),
+                'current_quantity': quantity,
+                'last_updated_at': datetime.now().isoformat(),
                 'last_counted_at': datetime.now().isoformat()
             }
-            
-            if user_id:
-                inventory_data['last_counted_by'] = user_id
             
             if existing.data:
                 # Update existing record
                 response = self.client.table('inventory').update(inventory_data).eq('product_id', product_id).eq('branch_id', branch_id).execute()
+                print(f"Updated inventory for product {product_id} in branch {branch_id}")
             else:
                 # Insert new record
                 inventory_data.update({
@@ -104,6 +103,7 @@ class SupabaseManager:
                     'branch_id': branch_id
                 })
                 response = self.client.table('inventory').insert(inventory_data).execute()
+                print(f"Created new inventory record for product {product_id} in branch {branch_id}")
             
             return len(response.data) > 0
         except Exception as e:
