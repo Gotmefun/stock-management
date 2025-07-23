@@ -3,10 +3,14 @@ import hashlib
 from datetime import datetime, timedelta
 import os
 from functools import wraps
+from dotenv import load_dotenv
 from upload_to_drive import create_drive_uploader
 from sheets_manager import create_sheets_manager
 from oauth_manager import oauth_drive_manager
 from supabase_manager import create_supabase_manager
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
@@ -307,45 +311,33 @@ def submit_stock():
             filename = f"stock_{data['barcode']}_{timestamp}.jpg"
             print(f"Uploading image with filename: {filename}")
             
-            # Try Google Apps Script upload first (easier than OAuth2)
-            try:
-                upload_result = upload_via_apps_script(data['image_data'], filename)
-                if upload_result:
-                    image_url = upload_result
-                    print(f"Apps Script upload successful: {image_url}")
-                else:
-                    print("Apps Script upload failed - trying OAuth2...")
-            except Exception as apps_script_error:
-                print(f"Apps Script upload error: {apps_script_error}")
-                print("Trying OAuth2...")
-                
-                # Fallback to OAuth2 if Apps Script fails
-                if oauth_drive_manager.is_authorized():
-                    try:
-                        # Get or create folder path
-                        folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
+            # Try OAuth2 Google Drive upload
+            if oauth_drive_manager.is_authorized():
+                try:
+                    # Get or create folder path
+                    folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
+                    
+                    # Upload to Google Drive
+                    oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
+                        data['image_data'], 
+                        filename,
+                        folder_id
+                    )
+                    
+                    if oauth_upload_result:
+                        image_url = oauth_upload_result['web_view_link']
+                        print(f"OAuth2 upload successful: {image_url}")
+                    else:
+                        print("OAuth2 upload failed")
                         
-                        # Upload to Google Drive
-                        oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
-                            data['image_data'], 
-                            filename,
-                            folder_id
-                        )
-                        
-                        if oauth_upload_result:
-                            image_url = oauth_upload_result['web_view_link']
-                            print(f"OAuth2 upload successful: {image_url}")
-                        else:
-                            print("OAuth2 upload failed")
-                            
-                    except Exception as oauth_error:
-                        print(f"OAuth2 upload error: {oauth_error}")
-                else:
-                    print("Google Drive not authorized")
+                except Exception as oauth_error:
+                    print(f"OAuth2 upload error: {oauth_error}")
+            else:
+                print("Google Drive not authorized - saving locally")
             
+            # Fallback to local storage if OAuth2 failed or not authorized
             if not image_url:
-                print("Google Drive upload failed - saving locally as backup")
-                # Fallback to local storage
+                print("Google Drive upload failed or not authorized - saving locally as backup")
                 import os
                 import base64
                 

@@ -411,3 +411,4 @@ function showAlert(message, type) {
         container.innerHTML = '';
     }, 5000);
 }
+
