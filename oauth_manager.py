@@ -41,7 +41,8 @@ class OAuth2DriveManager:
                     "client_secret": client_secret,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "redirect_uris": [os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.ptee88.com/oauth2callback')]
                 }
             }
         else:
@@ -56,14 +57,23 @@ class OAuth2DriveManager:
         """Get authorization URL for OAuth2 flow"""
         # Try to create credentials from environment variables first
         client_config = self._get_client_config()
+        redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.ptee88.com/oauth2callback')
+        
+        print(f"OAuth2 Debug - Client ID: {client_config.get('web', {}).get('client_id', 'N/A')[:20]}...")
+        print(f"OAuth2 Debug - Redirect URI: {redirect_uri}")
+        print(f"OAuth2 Debug - Scopes: {SCOPES}")
         
         flow = Flow.from_client_config(
             client_config,
             scopes=SCOPES,
-            redirect_uri=os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.ptee88.com/oauth2callback')
+            redirect_uri=redirect_uri
         )
         
-        auth_url, state = flow.authorization_url(prompt='consent')
+        auth_url, state = flow.authorization_url(
+            prompt='consent',
+            access_type='offline',
+            include_granted_scopes='true'
+        )
         
         # Store flow state and credentials info for later use
         flow_data = {
