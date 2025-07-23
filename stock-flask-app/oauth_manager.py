@@ -36,7 +36,7 @@ class OAuth2DriveManager:
         flow = Flow.from_client_secrets_file(
             self.credentials_file,
             scopes=SCOPES,
-            redirect_uri=os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.ptee88.com/oauth2callback')
+            redirect_uri='http://127.0.0.1:8080/oauth2callback'
         )
         
         auth_url, state = flow.authorization_url(prompt='consent')

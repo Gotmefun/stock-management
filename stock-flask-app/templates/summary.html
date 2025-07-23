@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสรุป - ระบบจัดการสต๊อก</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 1rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .admin-menu a {
+            background: #28a745;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-menu a:hover {
+            background: #218838;
+        }
+        
+        .admin-menu a.current {
+            background: #17a2b8;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .branch-summary {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .branch-summary h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .branch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .branch-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .branch-card h4 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .branch-card p {
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        
+        .products-table {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .products-table h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-low {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-good {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-overstocked {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .number-cell {
+            text-align: right;
+            font-weight: 500;
+        }
+        
+        .filters {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>รายงานสรุปการวิเคราะห์สต๊อก</h1>
+        <div class="user-info">
+            <div class="admin-menu">
+                <a href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+                <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
+                <a href="{{ url_for('admin_summary') }}" class="current">📋 รายงานสรุป</a>
+                <a href="{{ url_for('view_products') }}">📦 รายการสินค้า</a>
+            </div>
+            <span>ผู้ใช้: {{ session.username }} ({{ session.role }})</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
+        </div>
+    </div>
+    
+    <div class="summary-cards">
+        <div class="card">
+            <h3>สินค้าทั้งหมด</h3>
+            <div class="number">{{ products|length }}</div>
+            <div class="label">รายการ</div>
+        </div>
+        <div class="card">
+            <h3>สต๊อกรวม</h3>
+            <div class="number">{{ products|sum(attribute='total_stock') }}</div>
+            <div class="label">ชิ้น</div>
+        </div>
+        <div class="card">
+            <h3>ยอดขาย 30 วัน</h3>
+            <div class="number">{{ products|sum(attribute='sold_30days') }}</div>
+            <div class="label">ชิ้น</div>
+        </div>
+        <div class="card">
+            <h3>สาขาที่นับแล้ว</h3>
+            <div class="number">{{ branch_summary|length }}</div>
+            <div class="label">สาขา</div>
+        </div>
+    </div>
+    
+    {% if branch_summary %}
+    <div class="branch-summary">
+        <h2>สรุปตามสาขา</h2>
+        <div class="branch-grid">
+            {% for branch in branch_summary %}
+            <div class="branch-card">
+                <h4>{{ branch.branch }}</h4>
+                <p>สินค้าที่นับ: {{ branch.items_counted }} รายการ</p>
+                <p>จำนวนรวม: {{ branch.total_quantity }} ชิ้น</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="products-table">
+        <h2>รายละเอียดสินค้า</h2>
+        
+        <div class="filters">
+            <select class="filter-select" id="status-filter" onchange="filterTable()">
+                <option value="">ทุกสถานะ</option>
+                <option value="critical">วิกฤต (< 7 วัน)</option>
+                <option value="low">ต่ำ (7-30 วัน)</option>
+                <option value="good">ดี (30-90 วัน)</option>
+                <option value="overstocked">เกิน (> 90 วัน)</option>
+            </select>
+            
+            <select class="filter-select" id="sort-filter" onchange="filterTable()">
+                <option value="days_asc">เรียงตามวันคงเหลือ (น้อย-มาก)</option>
+                <option value="days_desc">เรียงตามวันคงเหลือ (มาก-น้อย)</option>
+                <option value="name_asc">เรียงตามชื่อ (A-Z)</option>
+                <option value="stock_desc">เรียงตามสต๊อก (มาก-น้อย)</option>
+            </select>
+        </div>
+        
+        <div class="table-responsive">
+            <table id="products-table">
+                <thead>
+                    <tr>
+                        <th>บาร์โค้ด</th>
+                        <th>ชื่อสินค้า</th>
+                        <th>สต๊อกคงเหลือ</th>
+                        <th>ขาย 30 วัน</th>
+                        <th>ขาย 7 วัน</th>
+                        <th>วันคงเหลือ</th>
+                        <th>แนะนำสั่งซื้อ</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr data-days="{{ product.days_of_stock }}">
+                        <td>{{ product.barcode }}</td>
+                        <td>{{ product.product_name }}</td>
+                        <td class="number-cell">{{ product.total_stock }}</td>
+                        <td class="number-cell">{{ product.sold_30days }}</td>
+                        <td class="number-cell">{{ product.sold_7days }}</td>
+                        <td class="number-cell">
+                            {% if product.days_of_stock >= 999 %}
+                                ∞
+                            {% else %}
+                                {{ "%.1f"|format(product.days_of_stock) }}
+                            {% endif %}
+                        </td>
+                        <td class="number-cell">
+                            {% if product.suggested_order > 0 %}
+                                {{ product.suggested_order }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.days_of_stock < 7 %}
+                                <span class="status-badge status-critical">วิกฤต</span>
+                            {% elif product.days_of_stock < 30 %}
+                                <span class="status-badge status-low">ต่ำ</span>
+                            {% elif product.days_of_stock < 90 %}
+                                <span class="status-badge status-good">ดี</span>
+                            {% else %}
+                                <span class="status-badge status-overstocked">เกิน</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        function filterTable() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+            const table = document.getElementById('products-table');
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            // Filter rows
+            rows.forEach(row => {
+                const daysOfStock = parseFloat(row.getAttribute('data-days'));
+                const statusBadge = row.querySelector('.status-badge');
+                let show = true;
+                
+                if (statusFilter) {
+                    if (statusFilter === 'critical' && daysOfStock >= 7) show = false;
+                    if (statusFilter === 'low' && (daysOfStock < 7 || daysOfStock >= 30)) show = false;
+                    if (statusFilter === 'good' && (daysOfStock < 30 || daysOfStock >= 90)) show = false;
+                    if (statusFilter === 'overstocked' && daysOfStock < 90) show = false;
+                }
+                
+                row.style.display = show ? '' : 'none';
+            });
+            
+            // Sort rows
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            
+            visibleRows.sort((a, b) => {
+                const daysA = parseFloat(a.getAttribute('data-days'));
+                const daysB = parseFloat(b.getAttribute('data-days'));
+                
+                switch (sortFilter) {
+                    case 'days_asc':
+                        return daysA - daysB;
+                    case 'days_desc':
+                        return daysB - daysA;
+                    case 'name_asc':
+                        return a.cells[1].textContent.localeCompare(b.cells[1].textContent);
+                    case 'stock_desc':
+                        return parseInt(b.cells[2].textContent) - parseInt(a.cells[2].textContent);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Reorder rows
+            visibleRows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>

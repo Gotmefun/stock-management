@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Inventory Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+        }
+        
+        .admin-menu a {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-menu a:hover,
+        .admin-menu a.current {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-card.sales {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .stat-card.products {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .stat-card.alerts {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+        
+        .stat-card.stock {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-card h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .chart-placeholder {
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .tables-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .table-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table-card h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9rem;
+        }
+        
+        .data-table td {
+            font-size: 0.9rem;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .alert-badge {
+            background: #dc3545;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .alert-badge.low {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .alert-badge.medium {
+            background: #fd7e14;
+        }
+        
+        .alert-badge.high {
+            background: #dc3545;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+            font-style: italic;
+        }
+        
+        .filter-section {
+            background: white;
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-controls select {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-section,
+            .tables-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📊 Smart Inventory Dashboard</h1>
+            <div class="user-info">
+                {% if session.role == 'admin' %}
+                <div class="admin-menu">
+                    <a href="{{ url_for('dashboard') }}" class="current">📊 Dashboard</a>
+                    <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
+                    <a href="{{ url_for('admin_summary') }}">📋 รายงาน</a>
+                    <a href="{{ url_for('view_products') }}">📦 สินค้า</a>
+                </div>
+                {% endif %}
+                <span>{{ session.username }} ({{ session.role }})</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">ออกจากระบบ</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-controls">
+                <label for="branch-filter">สาขา:</label>
+                <select id="branch-filter" onchange="filterDashboard()">
+                    <option value="">ทุกสาขา</option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label for="period-filter">ช่วงเวลา:</label>
+                <select id="period-filter" onchange="filterDashboard()">
+                    <option value="7">7 วันล่าสุด</option>
+                    <option value="30" selected>30 วันล่าสุด</option>
+                    <option value="90">90 วันล่าสุด</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="dashboard-grid">
+            <div class="stat-card sales">
+                <div class="icon">💰</div>
+                <h3>ยอดขายวันนี้</h3>
+                <div class="value">฿{{ "{:,.2f}".format(summary.today_sales) }}</div>
+            </div>
+            
+            <div class="stat-card products">
+                <div class="icon">📦</div>
+                <h3>จำนวนสินค้า</h3>
+                <div class="value">{{ summary.total_products }}</div>
+            </div>
+            
+            <div class="stat-card alerts">
+                <div class="icon">⚠️</div>
+                <h3>การแจ้งเตือน</h3>
+                <div class="value">{{ summary.active_alerts_count }}</div>
+            </div>
+            
+            <div class="stat-card stock">
+                <div class="icon">📉</div>
+                <h3>สินค้าใกล้หมด</h3>
+                <div class="value">{{ summary.low_stock_count }}</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <h3>📈 ยอดขายรายวัน</h3>
+                <div class="chart-placeholder">
+                    <div>
+                        <p>กราฟยอดขายรายวันจะแสดงที่นี่</p>
+                        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #999;">
+                            (รอการเชื่อมต่อ Chart.js)
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3>🏆 สินค้าขายดี Top 5</h3>
+                {% if summary.top_products %}
+                <div style="padding: 1rem 0;">
+                    {% for product in summary.top_products %}
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.5rem; background: #f8f9fa; border-radius: 8px;">
+                        <span style="font-weight: 500;">{{ product.product.name[:20] }}...</span>
+                        <span style="color: #667eea; font-weight: bold;">{{ product.total_quantity }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-data">ยังไม่มีข้อมูลการขาย</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tables Section -->
+        <div class="tables-section">
+            <div class="table-card">
+                <h3>🚨 การแจ้งเตือนล่าสุด</h3>
+                {% if alerts %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>สินค้า</th>
+                            <th>ประเภท</th>
+                            <th>ความสำคัญ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                        <tr>
+                            <td>{{ alert.products.name if alert.products else 'N/A' }}</td>
+                            <td>{{ alert.title }}</td>
+                            <td>
+                                <span class="alert-badge {{ alert.severity }}">
+                                    {{ alert.severity }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">ไม่มีการแจ้งเตือน</div>
+                {% endif %}
+            </div>
+            
+            <div class="table-card">
+                <h3>📋 การนับสต๊อกล่าสุด</h3>
+                {% if summary.recent_stock_counts %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>สินค้า</th>
+                            <th>จำนวน</th>
+                            <th>วันที่</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for count in summary.recent_stock_counts %}
+                        <tr>
+                            <td>{{ count.products.name if count.products else 'N/A' }}</td>
+                            <td>{{ count.counted_quantity }}</td>
+                            <td>{{ count.counted_at[:10] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">ยังไม่มีการนับสต๊อก</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterDashboard() {
+            const branchId = document.getElementById('branch-filter').value;
+            const period = document.getElementById('period-filter').value;
+            
+            // Reload page with filters
+            const url = new URL(window.location);
+            if (branchId) {
+                url.searchParams.set('branch_id', branchId);
+            } else {
+                url.searchParams.delete('branch_id');
+            }
+            url.searchParams.set('period', period);
+            
+            window.location.href = url.toString();
+        }
+        
+        // Auto-refresh dashboard every 5 minutes
+        setTimeout(() => {
+            window.location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสินค้าไม่เคลื่อนไหว - ระบบจัดการสต๊อก</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 1rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .nav-links a {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .nav-links a:hover {
+            background: #5a6fd8;
+        }
+        
+        .nav-links a.danger {
+            background: #dc3545;
+        }
+        
+        .nav-links a.danger:hover {
+            background: #c82333;
+        }
+        
+        .nav-links a.secondary {
+            background: #6c757d;
+        }
+        
+        .nav-links a.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .alert {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert h3 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .products-table {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .products-table h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .number-cell {
+            text-align: right;
+            font-weight: 500;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .empty-state img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: #28a745;
+        }
+        
+        .filters {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .export-btn {
+            background: #17a2b8;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .export-btn:hover {
+            background: #138496;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>รายงานสินค้าไม่เคลื่อนไหว</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('admin_summary') }}">รายงานสรุป</a>
+            <a href="{{ url_for('sync_sales') }}" class="secondary">ซิงค์ยอดขาย</a>
+            <a href="{{ url_for('logout') }}" class="danger">ออกจากระบบ</a>
+        </div>
+    </div>
+    
+    <div class="alert">
+        <h3>⚠️ คำเตือน</h3>
+        <p>รายงานนี้แสดงสินค้าที่ไม่มีการขายในช่วง 30 วันที่ผ่านมา หรือไม่เคยมีการขายเลย สินค้าเหล่านี้อาจต้องพิจารณาลดราคา หรือหาวิธีการตลาดเพิ่มเติม</p>
+    </div>
+    
+    {% set total_slow_stock = products|sum(attribute='total_stock') %}
+    {% set never_sold = products|selectattr('last_sale_date', 'equalto', 'Never')|list %}
+    {% set old_sold = products|rejectattr('last_sale_date', 'equalto', 'Never')|list %}
+    
+    <div class="stats-cards">
+        <div class="card">
+            <h3>สินค้าไม่เคลื่อนไหว</h3>
+            <div class="number">{{ products|length }}</div>
+            <div class="label">รายการ</div>
+        </div>
+        <div class="card">
+            <h3>สต๊อกค้างทั้งหมด</h3>
+            <div class="number">{{ total_slow_stock }}</div>
+            <div class="label">ชิ้น</div>
+        </div>
+        <div class="card">
+            <h3>ไม่เคยขายเลย</h3>
+            <div class="number">{{ never_sold|length }}</div>
+            <div class="label">รายการ</div>
+        </div>
+        <div class="card">
+            <h3>ขายเก่า > 30 วัน</h3>
+            <div class="number">{{ old_sold|length }}</div>
+            <div class="label">รายการ</div>
+        </div>
+    </div>
+    
+    <div class="products-table">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>รายละเอียดสินค้า</h2>
+            <button class="export-btn" onclick="exportToCSV()">ส่งออก CSV</button>
+        </div>
+        
+        <div class="filters">
+            <input type="text" class="filter-input" id="search-input" placeholder="ค้นหาสินค้า..." onkeyup="filterTable()">
+            <select class="filter-input" id="sale-filter" onchange="filterTable()">
+                <option value="">ทุกสถานะ</option>
+                <option value="never">ไม่เคยขายเลย</option>
+                <option value="old">ขายเก่า > 30 วัน</option>
+            </select>
+        </div>
+        
+        {% if products %}
+        <div class="table-responsive">
+            <table id="products-table">
+                <thead>
+                    <tr>
+                        <th>บาร์โค้ด</th>
+                        <th>ชื่อสินค้า</th>
+                        <th>สต๊อกคงเหลือ</th>
+                        <th>ขายครั้งล่าสุด</th>
+                        <th>สถานะ</th>
+                        <th>แนะนำ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr data-sale-status="{{ 'never' if product.last_sale_date == 'Never' else 'old' }}">
+                        <td>{{ product.barcode }}</td>
+                        <td>{{ product.product_name }}</td>
+                        <td class="number-cell">{{ product.total_stock }}</td>
+                        <td>{{ product.last_sale_date }}</td>
+                        <td>
+                            {% if product.last_sale_date == 'Never' %}
+                                <span class="status-badge">ไม่เคยขาย</span>
+                            {% else %}
+                                <span class="status-badge">ขายเก่า</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.last_sale_date == 'Never' %}
+                                ลดราคา / โปรโมชั่น
+                            {% else %}
+                                ตรวจสอบความต้องการ
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+            <h3>ยินดีด้วย! ไม่มีสินค้าไม่เคลื่อนไหว</h3>
+            <p>สินค้าทุกรายการมีการขายในช่วง 30 วันที่ผ่านมา</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function filterTable() {
+            const searchInput = document.getElementById('search-input').value.toLowerCase();
+            const saleFilter = document.getElementById('sale-filter').value;
+            const table = document.getElementById('products-table');
+            
+            if (!table) return;
+            
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            rows.forEach(row => {
+                const productName = row.cells[1].textContent.toLowerCase();
+                const barcode = row.cells[0].textContent.toLowerCase();
+                const saleStatus = row.getAttribute('data-sale-status');
+                
+                let show = true;
+                
+                // Text search
+                if (searchInput && !productName.includes(searchInput) && !barcode.includes(searchInput)) {
+                    show = false;
+                }
+                
+                // Sale status filter
+                if (saleFilter && saleStatus !== saleFilter) {
+                    show = false;
+                }
+                
+                row.style.display = show ? '' : 'none';
+            });
+        }
+        
+        function exportToCSV() {
+            const table = document.getElementById('products-table');
+            
+            if (!table) {
+                alert('ไม่มีข้อมูลสำหรับส่งออก');
+                return;
+            }
+            
+            let csv = 'บาร์โค้ด,ชื่อสินค้า,สต๊อกคงเหลือ,ขายครั้งล่าสุด,สถานะ,แนะนำ\n';
+            
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cols = row.querySelectorAll('td');
+                    const rowData = Array.from(cols).map(col => {
+                        return '"' + col.textContent.replace(/"/g, '""') + '"';
+                    }).join(',');
+                    csv += rowData + '\n';
+                }
+            });
+            
+            // Download CSV
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'สินค้าไม่เคลื่อนไหว_' + new Date().toISOString().split('T')[0] + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
