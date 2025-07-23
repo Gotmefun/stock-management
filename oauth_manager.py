@@ -28,13 +28,37 @@ class OAuth2DriveManager:
         self.drive_service = None
         self.credentials = None
         
+    def _get_client_config(self):
+        """Get client configuration from environment variables or file"""
+        client_id = os.environ.get('GOOGLE_CLIENT_ID')
+        client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+        
+        if client_id and client_secret:
+            # Create from environment variables
+            return {
+                "web": {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs"
+                }
+            }
+        else:
+            # Fallback to file
+            if not os.path.exists(self.credentials_file):
+                raise Exception(f"OAuth2 credentials file not found: {self.credentials_file}")
+            
+            with open(self.credentials_file, 'r') as f:
+                return json.load(f)
+        
     def get_authorization_url(self):
         """Get authorization URL for OAuth2 flow"""
-        if not os.path.exists(self.credentials_file):
-            raise Exception(f"OAuth2 credentials file not found: {self.credentials_file}")
+        # Try to create credentials from environment variables first
+        client_config = self._get_client_config()
         
-        flow = Flow.from_client_secrets_file(
-            self.credentials_file,
+        flow = Flow.from_client_config(
+            client_config,
             scopes=SCOPES,
             redirect_uri=os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.ptee88.com/oauth2callback')
         )
@@ -73,10 +97,13 @@ class OAuth2DriveManager:
                 flow_data = json.load(f)
             print(f"Flow data loaded: {list(flow_data.keys())}")
             
+            # Get client config (use same method as authorization)
+            client_config = self._get_client_config()
+            
             # Recreate flow
             print("Recreating OAuth flow...")
             flow = Flow.from_client_config(
-                flow_data['client_config'],
+                client_config,
                 scopes=flow_data['scopes'],
                 redirect_uri=flow_data['redirect_uri']
             )
