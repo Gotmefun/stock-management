@@ -532,8 +532,29 @@ function testUpload() {
                 }
             }
         } else {
-            showAlert(`❌ ทดสอบล้มเหลว!\n${result.summary || 'ไม่สามารถอัปโหลดได้ทุกวิธี'}`, 'error');
+            // Show detailed error information
+            let errorDetails = result.summary || 'ไม่สามารถอัปโหลดได้ทุกวิธี';
+            
+            // Add specific error details for each method
+            if (result.results) {
+                let details = [];
+                if (result.results.apps_script && !result.results.apps_script.success) {
+                    details.push(`Apps Script: ${result.results.apps_script.error || 'ล้มเหลว'}`);
+                }
+                if (result.results.oauth2 && !result.results.oauth2.success) {
+                    details.push(`OAuth2: ${result.results.oauth2.error || 'ล้มเหลว'}`);
+                }
+                if (details.length > 0) {
+                    errorDetails += `\n\nรายละเอียด:\n${details.join('\n')}`;
+                }
+            }
+            
+            showAlert(`❌ ทดสอบล้มเหลว!\n${errorDetails}`, 'error');
             console.error('Upload test failed:', result);
+            
+            // Also log individual results for debugging
+            console.log('Apps Script result:', result.results?.apps_script);
+            console.log('OAuth2 result:', result.results?.oauth2);
         }
     })
     .catch(error => {

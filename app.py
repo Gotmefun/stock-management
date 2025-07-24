@@ -45,8 +45,11 @@ APPS_SCRIPT_URL = os.environ.get('APPS_SCRIPT_URL', 'https://script.google.com/m
 
 def upload_via_apps_script(image_data, filename, branch=None):
     """Upload image via Google Apps Script with branch-specific folder"""
-    if APPS_SCRIPT_URL == 'YOUR_APPS_SCRIPT_URL_HERE':
-        print("Apps Script URL not configured")
+    print(f"=== UPLOAD VIA APPS SCRIPT ===")
+    print(f"APPS_SCRIPT_URL: {APPS_SCRIPT_URL}")
+    
+    if not APPS_SCRIPT_URL or APPS_SCRIPT_URL == 'YOUR_APPS_SCRIPT_URL_HERE':
+        print("❌ Apps Script URL not configured")
         return None
     
     try:
@@ -79,11 +82,17 @@ def upload_via_apps_script(image_data, filename, branch=None):
         }
         
         print(f"Sending image to Apps Script: {filename} -> {folder}")
+        print(f"Payload keys: {list(payload.keys())}")
+        print(f"Image data starts with: {payload['imageData'][:50]}...")
+        
         response = requests.post(
             APPS_SCRIPT_URL,
             json=payload,
             timeout=30
         )
+        
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {dict(response.headers)}")
         
         if response.status_code == 200:
             print(f"=== APPS SCRIPT RAW RESPONSE ===")
@@ -303,17 +312,28 @@ def test_upload():
         print(f"Filename: {filename}")
         print(f"Branch: {branch}")
         print(f"Image data length: {len(data['image_data'])}")
+        print(f"Apps Script URL: {APPS_SCRIPT_URL}")
+        print(f"OAuth drive manager available: {oauth_drive_manager is not None}")
         
         results = {}
         
         # Test 1: Google Apps Script
         print("\n=== TESTING APPS SCRIPT ===")
-        apps_script_result = upload_via_apps_script(data['image_data'], filename, branch)
-        results['apps_script'] = {
-            'success': bool(apps_script_result),
-            'url': apps_script_result,
-            'method': 'Google Apps Script'
-        }
+        try:
+            apps_script_result = upload_via_apps_script(data['image_data'], filename, branch)
+            results['apps_script'] = {
+                'success': bool(apps_script_result),
+                'url': apps_script_result,
+                'method': 'Google Apps Script'
+            }
+            if not apps_script_result:
+                results['apps_script']['error'] = 'Upload returned None/empty result'
+        except Exception as e:
+            results['apps_script'] = {
+                'success': False,
+                'error': str(e),
+                'method': 'Google Apps Script'
+            }
         
         # Test 2: OAuth2 Google Drive (if authorized)
         print("\n=== TESTING OAUTH2 DRIVE ===")
