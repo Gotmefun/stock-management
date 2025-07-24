@@ -65,6 +65,15 @@ class SupabaseManager:
             print(f"Error getting branch by name {name}: {e}")
             return None
     
+    def add_branch(self, branch_data: Dict) -> Optional[Dict]:
+        """Add new branch"""
+        try:
+            response = self.client.table('branches').insert(branch_data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error adding branch: {e}")
+            return None
+    
     # Inventory Management
     def get_inventory_by_branch(self, branch_id: str) -> List[Dict]:
         """Get inventory for a specific branch with product details"""

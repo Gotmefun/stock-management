@@ -466,11 +466,45 @@ def submit_stock():
                     
                     supabase_success = supabase_manager.add_stock_count(stock_count_data)
                     if supabase_success:
-                        print("Stock data saved to Supabase successfully")
+                        print("✅ Stock data saved to Supabase successfully")
                     else:
-                        print("Failed to save stock data to Supabase")
+                        print("❌ Failed to save stock data to Supabase")
                 else:
-                    print(f"Branch not found in Supabase: {data['branch']}")
+                    # Create branch if not exists, then save stock count
+                    print(f"⚠️ Branch not found: {branch_name}, creating new branch...")
+                    
+                    # Create new branch
+                    new_branch_data = {
+                        'name': branch_name,
+                        'code': branch_code,
+                        'address': f'ที่อยู่ {branch_name}',
+                        'phone': '',
+                        'is_active': True
+                    }
+                    
+                    new_branch = supabase_manager.add_branch(new_branch_data)
+                    if new_branch:
+                        print(f"✅ Created new branch: {branch_name}")
+                        
+                        # Now save stock count with new branch
+                        stock_count_data = {
+                            'product_id': product['id'],
+                            'branch_id': new_branch['id'],
+                            'barcode': data['barcode'],
+                            'product_name': data['product_name'],
+                            'counted_quantity': int(data['quantity']),
+                            'counter_name': data.get('counter_name', 'Unknown'),
+                            'image_url': image_url,
+                            'notes': f"Counted by {session.get('username', 'Unknown')}"
+                        }
+                        
+                        supabase_success = supabase_manager.add_stock_count(stock_count_data)
+                        if supabase_success:
+                            print("✅ Stock data saved to Supabase with new branch")
+                        else:
+                            print("❌ Failed to save stock data even with new branch")
+                    else:
+                        print(f"❌ Failed to create branch: {branch_name}")
             else:
                 print(f"Product not found in Supabase: {data['barcode']}")
         except Exception as e:
