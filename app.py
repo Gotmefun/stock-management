@@ -86,20 +86,29 @@ def upload_via_apps_script(image_data, filename, branch=None):
         )
         
         if response.status_code == 200:
-            result = response.json()
-            print(f"=== APPS SCRIPT RESPONSE ===")
-            print(f"Response: {result}")
-            print(f"Success: {result.get('success')}")
-            print(f"webViewLink: {result.get('webViewLink')}")
+            print(f"=== APPS SCRIPT RAW RESPONSE ===")
+            print(f"Response text: {response.text}")
+            print(f"Response length: {len(response.text)}")
             
-            if result.get('success'):
-                webview_link = result.get('webViewLink')
-                print(f"✅ Apps Script upload successful: {webview_link}")
-                print(f"Returning: {webview_link}")
-                return webview_link
-            else:
-                error_msg = result.get('error', 'Unknown error')
-                print(f"❌ Apps Script upload failed: {error_msg}")
+            try:
+                result = response.json()
+                print(f"=== APPS SCRIPT PARSED JSON ===")
+                print(f"Response: {result}")
+                print(f"Success: {result.get('success')}")
+                print(f"webViewLink: {result.get('webViewLink')}")
+                
+                if result.get('success'):
+                    webview_link = result.get('webViewLink')
+                    print(f"✅ Apps Script upload successful: {webview_link}")
+                    print(f"Returning: {webview_link}")
+                    return webview_link
+                else:
+                    error_msg = result.get('error', 'Unknown error')
+                    print(f"❌ Apps Script upload failed: {error_msg}")
+                    return None
+            except json.JSONDecodeError as e:
+                print(f"❌ Apps Script JSON parse error: {e}")
+                print(f"Raw response: {response.text}")
                 return None
         else:
             print(f"❌ Apps Script request failed: {response.status_code}")
@@ -424,8 +433,24 @@ def submit_stock():
             # Get product ID from barcode
             product = supabase_manager.get_product_by_barcode(data['barcode'])
             if product:
-                # Get branch ID
-                branch = supabase_manager.get_branch_by_name(data['branch'])
+                # Get branch ID with mapping
+                branch_code = data['branch']
+                # Map branch codes to full names
+                branch_name_mapping = {
+                    'CITY': 'สาขาตัวเมือง',
+                    'SCHOOL': 'สาขาหน้าโรงเรียน', 
+                    'PONGPAI': 'สาขาโป่งไผ่'
+                }
+                
+                # Try both code and full name
+                branch_name = branch_name_mapping.get(branch_code, branch_code)
+                print(f"Looking for branch: '{branch_code}' -> '{branch_name}'")
+                
+                branch = supabase_manager.get_branch_by_name(branch_name)
+                if not branch:
+                    # Try original code if mapping failed
+                    branch = supabase_manager.get_branch_by_name(branch_code)
+                
                 if branch:
                     # Prepare stock count data for Supabase
                     stock_count_data = {
