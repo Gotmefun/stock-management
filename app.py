@@ -87,14 +87,23 @@ def upload_via_apps_script(image_data, filename, branch=None):
         
         if response.status_code == 200:
             result = response.json()
+            print(f"=== APPS SCRIPT RESPONSE ===")
+            print(f"Response: {result}")
+            print(f"Success: {result.get('success')}")
+            print(f"webViewLink: {result.get('webViewLink')}")
+            
             if result.get('success'):
-                print(f"Apps Script upload successful: {result.get('webViewLink')}")
-                return result.get('webViewLink')
+                webview_link = result.get('webViewLink')
+                print(f"✅ Apps Script upload successful: {webview_link}")
+                print(f"Returning: {webview_link}")
+                return webview_link
             else:
-                print(f"Apps Script upload failed: {result.get('error')}")
+                error_msg = result.get('error', 'Unknown error')
+                print(f"❌ Apps Script upload failed: {error_msg}")
                 return None
         else:
-            print(f"Apps Script request failed: {response.status_code}")
+            print(f"❌ Apps Script request failed: {response.status_code}")
+            print(f"Response text: {response.text}")
             return None
             
     except Exception as e:
@@ -345,12 +354,19 @@ def submit_stock():
             # Try Google Apps Script upload first
             print("Trying Google Apps Script upload...")
             branch = data.get('branch', 'CITY')  # Get branch from data or default to CITY
+            print(f"Branch mapping: {branch} -> folder will be determined by Apps Script")
+            
             image_url = upload_via_apps_script(data['image_data'], filename, branch)
             
+            print(f"=== APPS SCRIPT RESULT ===")
+            print(f"Returned image_url: {image_url}")
+            print(f"image_url type: {type(image_url)}")
+            print(f"image_url empty?: {not image_url}")
+            
             if image_url:
-                print(f"Apps Script upload successful: {image_url}")
+                print(f"✅ Apps Script upload successful: {image_url}")
             else:
-                print("Apps Script upload failed, trying OAuth2...")
+                print("❌ Apps Script upload failed, trying OAuth2...")
                 # Try OAuth2 Google Drive upload as fallback
                 if oauth_drive_manager.is_authorized():
                     try:
