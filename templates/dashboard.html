@@ -428,6 +428,7 @@
                     <thead>
                         <tr>
                             <th>สินค้า</th>
+                            <th>สาขา</th>
                             <th>จำนวน</th>
                             <th>วันที่</th>
                         </tr>
@@ -436,6 +437,7 @@
                         {% for count in summary.recent_stock_counts %}
                         <tr>
                             <td>{{ count.products.name if count.products else 'N/A' }}</td>
+                            <td>{{ count.branches.name if count.branches else 'N/A' }}</td>
                             <td>{{ count.counted_quantity }}</td>
                             <td>{{ count.counted_at[:10] }}</td>
                         </tr>
