@@ -18,6 +18,8 @@ function initializeApp() {
     document.getElementById('take-photo').addEventListener('click', takePhoto);
     document.getElementById('retake-photo').addEventListener('click', retakePhoto);
     document.getElementById('test-upload').addEventListener('click', testUpload);
+    document.getElementById('authorize-drive').addEventListener('click', authorizeDrive);
+    document.getElementById('check-drive-status').addEventListener('click', checkDriveStatus);
     
     // Initialize barcode input change (both input and change events)
     document.getElementById('barcode').addEventListener('input', handleBarcodeChange);
@@ -565,6 +567,42 @@ function testUpload() {
         // Re-enable button
         testButton.disabled = false;
         testButton.textContent = 'ทดสอบอัปโหลด Drive';
+    });
+}
+
+function authorizeDrive() {
+    console.log('authorizeDrive function called');
+    showAlert('กำลังเปลี่ยนไปหน้า Google Authorization...', 'info');
+    
+    // Redirect to authorization endpoint
+    window.location.href = '/authorize_drive';
+}
+
+function checkDriveStatus() {
+    console.log('checkDriveStatus function called');
+    
+    const statusButton = document.getElementById('check-drive-status');
+    statusButton.disabled = true;
+    statusButton.textContent = 'กำลังตรวจสอบ...';
+    
+    fetch('/drive_status')
+    .then(response => response.json())
+    .then(result => {
+        console.log('Drive status result:', result);
+        
+        if (result.authorized) {
+            showAlert(`✅ ${result.message}`, 'success');
+        } else {
+            showAlert(`❌ ${result.message}\nกรุณากด "🔑 Authorize Google Drive" เพื่อให้สิทธิ์`, 'warning');
+        }
+    })
+    .catch(error => {
+        console.error('Error checking drive status:', error);
+        showAlert('❌ เกิดข้อผิดพลาดในการตรวจสอบสถานะ', 'error');
+    })
+    .finally(() => {
+        statusButton.disabled = false;
+        statusButton.textContent = '📊 ตรวจสอบสถานะ Drive';
     });
 }
 
