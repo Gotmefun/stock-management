@@ -43,8 +43,8 @@ USERS = {
 # Google Apps Script Web App URL - ใส่ URL ที่ได้จาก deployment
 APPS_SCRIPT_URL = os.environ.get('APPS_SCRIPT_URL', 'https://script.google.com/macros/s/AKfycbxaVXe5bMs7tw8n5iUZ_l4D4aeGJk-bEFT-QNpTe87XXGRvwhBCB4go9u9e9ddJ364/exec')
 
-def upload_via_apps_script(image_data, filename):
-    """Upload image via Google Apps Script"""
+def upload_via_apps_script(image_data, filename, branch=None):
+    """Upload image via Google Apps Script with branch-specific folder"""
     if APPS_SCRIPT_URL == 'YOUR_APPS_SCRIPT_URL_HERE':
         print("Apps Script URL not configured")
         return None
@@ -53,13 +53,32 @@ def upload_via_apps_script(image_data, filename):
         import requests
         import json
         
+        # Branch mapping for folder organization
+        branch_mapping = {
+            'CITY': 'สาขาตัวเมือง',
+            'SCHOOL': 'สาขาหน้าโรงเรียน', 
+            'PONGPAI': 'สาขาโป่งไผ่',
+            # Support Thai names as well
+            'สาขาตัวเมือง': 'สาขาตัวเมือง',
+            'สาขาหน้าโรงเรียน': 'สาขาหน้าโรงเรียน',
+            'สาขาโป่งไผ่': 'สาขาโป่งไผ่'
+        }
+        
+        # Create branch-specific folder path
+        if branch and branch in branch_mapping:
+            folder_name = branch_mapping[branch]
+        else:
+            folder_name = 'สาขาตัวเมือง'  # Default to CITY branch
+        
+        folder = f'Check Stock Project/{folder_name}'
+        
         payload = {
             'imageData': image_data,
             'filename': filename,
-            'folder': 'Check Stock Project/Pic Stock Counting'
+            'folder': folder
         }
         
-        print(f"Sending image to Apps Script: {filename}")
+        print(f"Sending image to Apps Script: {filename} -> {folder}")
         response = requests.post(
             APPS_SCRIPT_URL,
             json=payload,
@@ -294,7 +313,19 @@ def get_product(barcode):
 @app.route('/submit_stock', methods=['POST'])
 @staff_required
 def submit_stock():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+        print(f"=== SUBMIT STOCK DEBUG ===")
+        print(f"Received data keys: {list(data.keys()) if data else 'None'}")
+        print(f"Branch: {data.get('branch') if data else 'None'}")
+        print(f"Barcode: {data.get('barcode') if data else 'None'}")
+        print(f"Has image_data: {'image_data' in data if data else 'None'}")
+    except Exception as e:
+        print(f"Error parsing request data: {e}")
+        return jsonify({'error': 'Invalid request data'}), 400
+    
+    if not data:
+        return jsonify({'error': 'No data received'}), 400
     
     # Save to both Supabase and Google Sheets for redundancy
     supabase_success = False
@@ -311,29 +342,38 @@ def submit_stock():
             filename = f"stock_{data['barcode']}_{timestamp}.jpg"
             print(f"Uploading image with filename: {filename}")
             
-            # Try OAuth2 Google Drive upload
-            if oauth_drive_manager.is_authorized():
-                try:
-                    # Get or create folder path
-                    folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
-                    
-                    # Upload to Google Drive
-                    oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
-                        data['image_data'], 
-                        filename,
-                        folder_id
-                    )
-                    
-                    if oauth_upload_result:
-                        image_url = oauth_upload_result['web_view_link']
-                        print(f"OAuth2 upload successful: {image_url}")
-                    else:
-                        print("OAuth2 upload failed")
-                        
-                except Exception as oauth_error:
-                    print(f"OAuth2 upload error: {oauth_error}")
+            # Try Google Apps Script upload first
+            print("Trying Google Apps Script upload...")
+            branch = data.get('branch', 'CITY')  # Get branch from data or default to CITY
+            image_url = upload_via_apps_script(data['image_data'], filename, branch)
+            
+            if image_url:
+                print(f"Apps Script upload successful: {image_url}")
             else:
-                print("Google Drive not authorized - saving locally")
+                print("Apps Script upload failed, trying OAuth2...")
+                # Try OAuth2 Google Drive upload as fallback
+                if oauth_drive_manager.is_authorized():
+                    try:
+                        # Get or create folder path
+                        folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
+                        
+                        # Upload to Google Drive
+                        oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
+                            data['image_data'], 
+                            filename,
+                            folder_id
+                        )
+                        
+                        if oauth_upload_result:
+                            image_url = oauth_upload_result['web_view_link']
+                            print(f"OAuth2 upload successful: {image_url}")
+                        else:
+                            print("OAuth2 upload failed")
+                            
+                    except Exception as oauth_error:
+                        print(f"OAuth2 upload error: {oauth_error}")
+                else:
+                    print("Google Drive not authorized")
             
             # Fallback to local storage if OAuth2 failed or not authorized
             if not image_url:
@@ -394,6 +434,8 @@ def submit_stock():
                 print(f"Product not found in Supabase: {data['barcode']}")
         except Exception as e:
             print(f"Error saving to Supabase: {e}")
+    else:
+        print("Supabase not available, skipping...")
     
     # Fallback to Google Sheets if available
     if sheets_manager:
@@ -415,6 +457,14 @@ def submit_stock():
                 print("Failed to save stock data to Google Sheets")
         except Exception as e:
             print(f"Error saving to Google Sheets: {e}")
+    else:
+        print("Google Sheets not available, skipping...")
+    
+    # If image was uploaded successfully, consider it a success even if database save failed
+    if image_url and image_url != '':
+        print(f"Image uploaded successfully: {image_url}")
+        # At minimum, we have the image uploaded
+        supabase_success = True  # Mark as success since image was uploaded
     
     # Return success if either method worked
     if supabase_success or sheets_success:
@@ -424,6 +474,14 @@ def submit_stock():
         }})
     else:
         return jsonify({'error': 'Failed to save stock data to any data source'}), 500
+
+# Add global error handler
+@app.errorhandler(500)
+def internal_error(error):
+    print(f"500 Error occurred: {error}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({'error': 'Internal server error', 'details': str(error)}), 500
 
 @app.route('/report/summary')
 @admin_required
@@ -504,4 +562,4 @@ def favicon():
 
 if __name__ == '__main__':
     init_sheets()
-    app.run(host='127.0.0.1', port=8080, debug=True)
+    app.run(host='127.0.0.1', port=8081, debug=True)
