@@ -429,17 +429,43 @@
                         <tr>
                             <th>สินค้า</th>
                             <th>สาขา</th>
-                            <th>จำนวน</th>
+                            <th>จำนวนที่นับได้</th>
+                            <th>สถานะการนับ</th>
+                            <th>การนับซ้ำ</th>
                             <th>วันที่</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for count in summary.recent_stock_counts %}
                         <tr>
-                            <td>{{ count.products.name if count.products else 'N/A' }}</td>
-                            <td>{{ count.branches.name if count.branches else 'N/A' }}</td>
+                            <td>{{ count.products.name if count.products else count.product_name or 'N/A' }}</td>
+                            <td>{{ count.branch_name or count.branches.name if count.branches else 'N/A' }}</td>
                             <td>{{ count.counted_quantity }}</td>
-                            <td>{{ count.counted_at[:10] }}</td>
+                            <td>
+                                {% if count.count_number %}
+                                    <span style="background: #e7f3ff; color: #0056b3; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                        นับครั้งที่ {{ count.count_number }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: #666;">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if count.repeat_count %}
+                                    {% if count.repeat_count == 1 %}
+                                        <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                            ครั้งแรก
+                                        </span>
+                                    {% else %}
+                                        <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                            ซ้ำ {{ count.repeat_count }} ครั้ง
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span style="color: #666;">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ count.counted_at[:16].replace('T', ' ') if count.counted_at else 'N/A' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

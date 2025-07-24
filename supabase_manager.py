@@ -121,7 +121,7 @@ class SupabaseManager:
     
     # Stock Counting
     def add_stock_count(self, count_data: Dict) -> bool:
-        """Add stock count record"""
+        """Add stock count record with count tracking"""
         try:
             # Ensure all required fields are present
             if 'counted_at' not in count_data:
@@ -134,12 +134,48 @@ class SupabaseManager:
                     print(f"Missing required field: {field}")
                     return False
             
-            print(f"Inserting stock count data: {count_data}")
+            # Get count number for this product and branch
+            try:
+                existing_counts = self.client.table('stock_counts').select('id').eq('product_id', count_data['product_id']).eq('branch_id', count_data['branch_id']).execute()
+                count_number = len(existing_counts.data) + 1
+                print(f"This will be count #{count_number} for product {count_data['product_id']} in branch {count_data['branch_id']}")
+            except Exception as e:
+                print(f"Error getting count number: {e}")
+                count_number = 1
+            
+            # Add count tracking to notes
+            current_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            count_status = f"นับครั้งที่ {count_number} - {current_time}"
+            
+            # Update or append to existing notes
+            existing_notes = count_data.get('notes', '')
+            if existing_notes:
+                count_data['notes'] = f"{existing_notes} | {count_status}"
+            else:
+                count_data['notes'] = count_status
+            
+            # Add count number as separate field
+            count_data['count_number'] = count_number
+            
+            # Add repeat count (same as count_number but more explicit)
+            count_data['repeat_count'] = count_number
+            
+            # Add branch name for easier querying
+            try:
+                branch_info = self.client.table('branches').select('name').eq('id', count_data['branch_id']).single().execute()
+                if branch_info.data:
+                    count_data['branch_name'] = branch_info.data['name']
+                    print(f"Added branch name: {count_data['branch_name']}")
+            except Exception as e:
+                print(f"Warning: Could not get branch name: {e}")
+                count_data['branch_name'] = 'Unknown'
+            
+            print(f"Inserting stock count data with tracking: {count_data}")
             response = self.client.table('stock_counts').insert(count_data).execute()
             
             # Update inventory with counted quantity if insert successful
             if response.data:
-                print("Stock count inserted successfully, updating inventory...")
+                print(f"✅ Stock count inserted successfully - {count_status}")
                 try:
                     self.update_inventory(
                         count_data['product_id'],
@@ -384,7 +420,7 @@ class SupabaseManager:
                     *,
                     products (name, barcode),
                     branches (name)
-                ''').order('counted_at', desc=True).limit(5)
+                ''').order('counted_at', desc=True).limit(10)
                 
                 if branch_id:
                     recent_counts = recent_counts.eq('branch_id', branch_id)

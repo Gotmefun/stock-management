@@ -17,6 +17,7 @@ function initializeApp() {
     document.getElementById('start-camera').addEventListener('click', startCamera);
     document.getElementById('take-photo').addEventListener('click', takePhoto);
     document.getElementById('retake-photo').addEventListener('click', retakePhoto);
+    document.getElementById('test-upload').addEventListener('click', testUpload);
     
     // Initialize barcode input change (both input and change events)
     document.getElementById('barcode').addEventListener('input', handleBarcodeChange);
@@ -135,6 +136,25 @@ function showProductInfo(product) {
     document.getElementById('product-name').textContent = productName;
     document.getElementById('product-barcode').textContent = product.barcode;
     document.getElementById('product-info').style.display = 'block';
+    
+    // Show duplicate warning if exists
+    if (product.duplicate_warning) {
+        const warning = product.duplicate_warning;
+        let warningMsg = `${warning.message}<br><small>${warning.details}`;
+        
+        // Add date info if available
+        if (warning.date_info) {
+            warningMsg += `<br>${warning.date_info}`;
+        }
+        
+        warningMsg += `</small>`;
+        
+        // Show warning alert
+        showAlert(warningMsg, 'warning');
+        
+        // Also log to console
+        console.log('Duplicate count warning:', warning);
+    }
 }
 
 function hideProductInfo() {
@@ -192,6 +212,7 @@ function takePhoto() {
     const photo = document.getElementById('photo');
     const takeButton = document.getElementById('take-photo');
     const retakeButton = document.getElementById('retake-photo');
+    const testUploadButton = document.getElementById('test-upload');
     
     console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
     
@@ -216,6 +237,7 @@ function takePhoto() {
     
     takeButton.disabled = true;
     retakeButton.disabled = false;
+    testUploadButton.disabled = false; // Enable test upload button
     
     console.log('Photo taken and UI updated');
     
@@ -231,6 +253,7 @@ function retakePhoto() {
     const startButton = document.getElementById('start-camera');
     const takeButton = document.getElementById('take-photo');
     const retakeButton = document.getElementById('retake-photo');
+    const testUploadButton = document.getElementById('test-upload');
     
     photo.style.display = 'none';
     video.style.display = 'none';
@@ -238,6 +261,7 @@ function retakePhoto() {
     startButton.disabled = false;
     takeButton.disabled = true;
     retakeButton.disabled = true;
+    testUploadButton.disabled = true; // Disable test upload button
 }
 
 function handleSubmit(event) {
@@ -288,8 +312,13 @@ function handleSubmit(event) {
 
 function submitStockData(data) {
     const submitButton = document.getElementById('submit-btn');
+    const statusDiv = document.getElementById('submit-status');
+    const statusMessage = document.getElementById('status-message');
+    
+    // Show loading status
     submitButton.disabled = true;
     submitButton.textContent = 'กำลังบันทึก...';
+    showSubmitStatus('กำลังบันทึกข้อมูล...', 'loading');
     
     console.log('Submitting to server:', data);
     
@@ -303,20 +332,30 @@ function submitStockData(data) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            showAlert('บันทึกข้อมูลสำเร็จ!', 'success');
+            // Show success status with count info if available
+            let successMsg = '✅ บันทึกข้อมูลสำเร็จ!';
+            if (result.count_info) {
+                successMsg += ` (${result.count_info})`;
+            }
+            showSubmitStatus(successMsg, 'success');
             
             // Add to recent scans
             addRecentScan(data);
             
-            // Reset form
-            resetForm();
+            // Reset form after short delay
+            setTimeout(() => {
+                resetForm();
+                hideSubmitStatus();
+            }, 3000);
         } else {
-            showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+            // Show error status
+            const errorMsg = result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+            showSubmitStatus('❌ ' + errorMsg, 'error');
         }
     })
     .catch(error => {
         console.error('Error submitting data:', error);
-        showAlert('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+        showSubmitStatus('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
     })
     .finally(() => {
         submitButton.disabled = false;
@@ -406,9 +445,105 @@ function showAlert(message, type) {
         </div>
     `;
     
-    // Auto-hide after 5 seconds
+    // Auto-hide after longer time for warnings (8 seconds)
+    const hideDelay = type === 'warning' ? 8000 : 5000;
     setTimeout(() => {
         container.innerHTML = '';
-    }, 5000);
+    }, hideDelay);
+}
+
+function showSubmitStatus(message, type) {
+    console.log('showSubmitStatus called:', message, type);
+    const statusDiv = document.getElementById('submit-status');
+    const statusMessage = document.getElementById('status-message');
+    
+    console.log('Status div found:', statusDiv);
+    console.log('Status message found:', statusMessage);
+    
+    if (statusDiv && statusMessage) {
+        statusMessage.textContent = message;
+        statusDiv.className = 'submit-status ' + type + ' show';
+        console.log('Status message displayed successfully');
+        console.log('Final className:', statusDiv.className);
+    } else {
+        console.error('Status elements not found!');
+    }
+}
+
+function hideSubmitStatus() {
+    console.log('hideSubmitStatus called');
+    const statusDiv = document.getElementById('submit-status');
+    if (statusDiv) {
+        statusDiv.className = 'submit-status';
+        console.log('Status message hidden');
+    } else {
+        console.error('Status div not found for hiding!');
+    }
+}
+
+function testUpload() {
+    console.log('testUpload function called');
+    
+    const photo = document.getElementById('photo');
+    const branchSelect = document.getElementById('branch');
+    const testButton = document.getElementById('test-upload');
+    
+    if (!photo.src || !photo.src.startsWith('data:')) {
+        showAlert('กรุณาถ่ายภาพก่อนทดสอบอัปโหลด', 'error');
+        return;
+    }
+    
+    const branch = branchSelect.value || 'CITY';
+    
+    // Disable button and show loading
+    testButton.disabled = true;
+    testButton.textContent = 'กำลังทดสอบ...';
+    showAlert('กำลังทดสอบการอัปโหลดไป Google Drive...', 'info');
+    
+    console.log('Testing upload with branch:', branch);
+    console.log('Image data length:', photo.src.length);
+    
+    fetch('/test_upload', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            image_data: photo.src,
+            branch: branch
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log('Test upload result:', result);
+        
+        if (result.success) {
+            const methods = result.successful_methods.join(', ');
+            showAlert(`✅ ทดสอบสำเร็จ!\n${result.summary}`, 'success');
+            
+            // Log detailed results
+            console.log('Successful methods:', result.successful_methods);
+            console.log('Detailed results:', result.results);
+            
+            // Show URLs in console
+            for (const [method, details] of Object.entries(result.results)) {
+                if (details.success && details.url) {
+                    console.log(`${method} URL:`, details.url);
+                }
+            }
+        } else {
+            showAlert(`❌ ทดสอบล้มเหลว!\n${result.summary || 'ไม่สามารถอัปโหลดได้ทุกวิธี'}`, 'error');
+            console.error('Upload test failed:', result);
+        }
+    })
+    .catch(error => {
+        console.error('Error testing upload:', error);
+        showAlert('❌ เกิดข้อผิดพลาดในการทดสอบ', 'error');
+    })
+    .finally(() => {
+        // Re-enable button
+        testButton.disabled = false;
+        testButton.textContent = 'ทดสอบอัปโหลด Drive';
+    });
 }
 

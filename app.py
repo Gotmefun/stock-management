@@ -285,6 +285,80 @@ def drive_status():
         'message': 'Google Drive is authorized' if is_authorized else 'Google Drive not authorized'
     })
 
+@app.route('/test_upload', methods=['POST'])
+@login_required
+def test_upload():
+    """Test image upload to Google Drive"""
+    try:
+        data = request.get_json()
+        if not data or 'image_data' not in data:
+            return jsonify({'error': 'No image data provided'}), 400
+        
+        # Generate test filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"test_upload_{timestamp}.jpg"
+        branch = data.get('branch', 'CITY')
+        
+        print(f"=== TESTING IMAGE UPLOAD ===")
+        print(f"Filename: {filename}")
+        print(f"Branch: {branch}")
+        print(f"Image data length: {len(data['image_data'])}")
+        
+        results = {}
+        
+        # Test 1: Google Apps Script
+        print("\n=== TESTING APPS SCRIPT ===")
+        apps_script_result = upload_via_apps_script(data['image_data'], filename, branch)
+        results['apps_script'] = {
+            'success': bool(apps_script_result),
+            'url': apps_script_result,
+            'method': 'Google Apps Script'
+        }
+        
+        # Test 2: OAuth2 Google Drive (if authorized)
+        print("\n=== TESTING OAUTH2 DRIVE ===")
+        if oauth_drive_manager.is_authorized():
+            try:
+                folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Test Upload')
+                oauth_result = oauth_drive_manager.upload_image_from_base64(
+                    data['image_data'], 
+                    f"oauth_{filename}",
+                    folder_id
+                )
+                results['oauth2'] = {
+                    'success': bool(oauth_result),
+                    'url': oauth_result.get('web_view_link') if oauth_result else None,
+                    'method': 'OAuth2 Google Drive'
+                }
+            except Exception as e:
+                results['oauth2'] = {
+                    'success': False,
+                    'error': str(e),
+                    'method': 'OAuth2 Google Drive'
+                }
+        else:
+            results['oauth2'] = {
+                'success': False,
+                'error': 'Not authorized',
+                'method': 'OAuth2 Google Drive'
+            }
+        
+        # Summary
+        successful_methods = [method for method, result in results.items() if result['success']]
+        
+        return jsonify({
+            'success': len(successful_methods) > 0,
+            'successful_methods': successful_methods,
+            'results': results,
+            'summary': f"Successfully uploaded via: {', '.join(successful_methods)}" if successful_methods else "All upload methods failed"
+        })
+        
+    except Exception as e:
+        print(f"Error in test_upload: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Test upload failed: {str(e)}'}), 500
+
 @app.route('/')
 @staff_required
 def index():
@@ -300,14 +374,57 @@ def get_product(barcode):
             product = supabase_manager.get_product_by_barcode(barcode)
             if product:
                 print(f"Found product in Supabase: {product}")
-                return jsonify({
+                
+                # Check for existing counts of this product
+                duplicate_warning = None
+                try:
+                    # Get all existing counts for this product (across all branches for now)
+                    existing_counts = supabase_manager.client.table('stock_counts').select('branch_name, count_number, counted_at').eq('barcode', barcode).order('counted_at', desc=True).execute()
+                    
+                    if existing_counts.data and len(existing_counts.data) > 0:
+                        total_counts = len(existing_counts.data)
+                        latest_count = existing_counts.data[0]
+                        
+                        # Create warning message
+                        branch_info = latest_count.get('branch_name', 'ไม่ระบุสาขา')
+                        count_number = latest_count.get('count_number', total_counts)
+                        counted_at = latest_count.get('counted_at', '')
+                        
+                        # Format date
+                        date_info = ''
+                        if counted_at:
+                            try:
+                                from datetime import datetime
+                                # Parse ISO format and convert to Thai format
+                                dt = datetime.fromisoformat(counted_at.replace('Z', '+00:00'))
+                                date_info = dt.strftime("%d/%m/%Y %H:%M")
+                            except:
+                                date_info = counted_at[:16].replace('T', ' ')
+                        
+                        duplicate_warning = {
+                            'message': f"⚠️ สินค้านี้เคยถูกนับไปแล้ว {total_counts} ครั้ง",
+                            'details': f"ครั้งล่าสุด: นับครั้งที่ {count_number} ที่ {branch_info}",
+                            'date_info': f"วันที่: {date_info}" if date_info else "",
+                            'total_counts': total_counts
+                        }
+                        print(f"Duplicate warning: {duplicate_warning}")
+                
+                except Exception as dup_error:
+                    print(f"Error checking duplicates: {dup_error}")
+                
+                response_data = {
                     'id': product['id'],
                     'name': product['name'],
                     'barcode': product['barcode'],
                     'sku': product.get('sku', ''),
                     'category': product.get('category', ''),
                     'selling_price': product.get('selling_price', 0)
-                })
+                }
+                
+                if duplicate_warning:
+                    response_data['duplicate_warning'] = duplicate_warning
+                    
+                return jsonify(response_data)
         except Exception as e:
             print(f"Error searching Supabase: {e}")
     
@@ -348,6 +465,7 @@ def submit_stock():
     # Save to both Supabase and Google Sheets for redundancy
     supabase_success = False
     sheets_success = False
+    count_info = ''
     
     image_url = ''
     
@@ -464,9 +582,17 @@ def submit_stock():
                         'notes': f"Counted by {session.get('username', 'Unknown')}"
                     }
                     
+                    # Get count info before saving
+                    try:
+                        existing_counts = supabase_manager.client.table('stock_counts').select('id').eq('product_id', product['id']).eq('branch_id', branch['id']).execute()
+                        count_number = len(existing_counts.data) + 1
+                        count_info = f"นับครั้งที่ {count_number}"
+                    except:
+                        count_info = "นับครั้งแรก"
+                    
                     supabase_success = supabase_manager.add_stock_count(stock_count_data)
                     if supabase_success:
-                        print("✅ Stock data saved to Supabase successfully")
+                        print(f"✅ Stock data saved to Supabase successfully - {count_info}")
                     else:
                         print("❌ Failed to save stock data to Supabase")
                 else:
@@ -498,9 +624,12 @@ def submit_stock():
                             'notes': f"Counted by {session.get('username', 'Unknown')}"
                         }
                         
+                        # Get count info for new branch (will be first count)
+                        count_info = "นับครั้งแรก"
+                        
                         supabase_success = supabase_manager.add_stock_count(stock_count_data)
                         if supabase_success:
-                            print("✅ Stock data saved to Supabase with new branch")
+                            print(f"✅ Stock data saved to Supabase with new branch - {count_info}")
                         else:
                             print("❌ Failed to save stock data even with new branch")
                     else:
@@ -543,10 +672,19 @@ def submit_stock():
     
     # Return success if either method worked
     if supabase_success or sheets_success:
-        return jsonify({'success': True, 'saved_to': {
-            'supabase': supabase_success,
-            'sheets': sheets_success
-        }})
+        response_data = {
+            'success': True, 
+            'saved_to': {
+                'supabase': supabase_success,
+                'sheets': sheets_success
+            }
+        }
+        
+        # Add count info if available
+        if count_info:
+            response_data['count_info'] = count_info
+            
+        return jsonify(response_data)
     else:
         return jsonify({'error': 'Failed to save stock data to any data source'}), 500
 
