@@ -3,11 +3,91 @@ let cameraId;
 let isScanning = false;
 let stream;
 let recentScans = [];
+let deferredPrompt;
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    registerServiceWorker();
 });
+
+// Register Service Worker for PWA
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful:', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New content is available, refresh to update
+                                if (confirm('มีการอัปเดทใหม่ ต้องการรีเฟรชหน้าเว็บหรือไม่?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+        });
+    } else {
+        console.log('Service Worker not supported');
+    }
+    
+    // Handle PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('PWA install prompt triggered');
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallPrompt();
+    });
+    
+    // Handle successful app installation
+    window.addEventListener('appinstalled', (evt) => {
+        console.log('PWA was installed');
+        showAlert('✅ แอปถูกติดตั้งเรียบร้อย!', 'success');
+    });
+}
+
+// Show PWA install prompt
+function showInstallPrompt() {
+    // Create install button if not exists
+    if (!document.getElementById('pwa-install-btn')) {
+        const installButton = document.createElement('button');
+        installButton.id = 'pwa-install-btn';
+        installButton.className = 'camera-btn';
+        installButton.style.background = '#28a745';
+        installButton.innerHTML = '📱 ติดตั้งแอป';
+        installButton.onclick = installPWA;
+        
+        // Add to camera controls
+        const cameraControls = document.querySelector('.camera-controls');
+        if (cameraControls) {
+            cameraControls.parentNode.appendChild(installButton);
+        }
+    }
+}
+
+// Install PWA
+function installPWA() {
+    const installButton = document.getElementById('pwa-install-btn');
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the PWA install prompt');
+                installButton.style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    }
+}
 
 function initializeApp() {
     // Initialize barcode form
