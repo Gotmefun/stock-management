@@ -481,13 +481,17 @@
                     <button type="button" class="camera-btn" id="start-camera">เปิดกล้อง</button>
                     <button type="button" class="camera-btn" id="take-photo" disabled>ถ่ายภาพ</button>
                     <button type="button" class="camera-btn" id="retake-photo" disabled>ถ่ายใหม่</button>
+                    {% if session.role == 'admin' %}
                     <button type="button" class="camera-btn" id="test-upload" disabled style="background: #28a745;">ทดสอบอัปโหลด Drive</button>
+                    {% endif %}
                 </div>
                 
+                {% if session.role == 'admin' %}
                 <div style="margin-top: 1rem; text-align: center;">
                     <button type="button" class="camera-btn" id="authorize-drive" style="background: #4285f4;">🔑 Authorize Google Drive</button>
                     <button type="button" class="camera-btn" id="check-drive-status" style="background: #6c757d;">📊 ตรวจสอบสถานะ Drive</button>
                 </div>
+                {% endif %}
             </div>
             
             <button type="submit" class="submit-btn" id="submit-btn">บันทึกข้อมูล</button>
