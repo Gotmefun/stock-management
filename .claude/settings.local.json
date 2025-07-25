@@ -18,7 +18,10 @@
       "Bash(./start_with_ngrok.sh:*)",
       "Bash(rm:*)",
       "Bash(wget:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(kill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

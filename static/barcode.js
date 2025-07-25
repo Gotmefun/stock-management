@@ -57,6 +57,11 @@ function registerServiceWorker() {
 
 // Show PWA install prompt
 function showInstallPrompt() {
+    // Only show install button for admin users
+    if (window.sessionData && window.sessionData.role !== 'admin') {
+        return;
+    }
+    
     // Create install button if not exists
     if (!document.getElementById('pwa-install-btn')) {
         const installButton = document.createElement('button');
