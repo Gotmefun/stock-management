@@ -110,9 +110,67 @@ function installPWA() {
         if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
             showAlert('✅ แอปถูกติดตั้งไว้แล้ว!', 'success');
         } else {
-            // Show instructions if no prompt available
-            showAlert('📱 วิธีติดตั้งแอป:\n• Chrome: กดเมนู 3 จุด → "ติดตั้งแอป"\n• Safari: กด Share Icon → "เพิ่มไปยังหน้าจอหลัก"\n• Firefox: กดเมนู → "ติดตั้งแอป"', 'info');
+            // Detect device and show specific instructions
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
+            
+            if (isIOS) {
+                showIOSInstallInstructions();
+            } else if (isAndroidChrome) {
+                showAlert('📱 วิธีติดตั้งแอป:\n• กดเมนู 3 จุด (⋮) ด้านบนขวา\n• เลือก "ติดตั้งแอป" หรือ "Add to Home Screen"', 'info');
+            } else {
+                showAlert('📱 วิธีติดตั้งแอป:\n• Chrome: กดเมนู 3 จุด → "ติดตั้งแอป"\n• Safari: กด Share → "เพิ่มไปยังหน้าจอหลัก"\n• Firefox: กดเมนู → "ติดตั้งแอป"', 'info');
+            }
         }
+    }
+}
+
+// Show iOS specific install instructions with visual guide
+function showIOSInstallInstructions() {
+    const message = `
+📱 วิธีติดตั้งแอปใน iPhone/iPad:
+
+1️⃣ กดปุ่ม Share (📤) ที่ด้านล่างหน้าจอ
+2️⃣ เลื่อนหา "เพิ่มไปยังหน้าจอหลัก" 
+3️⃣ กดปุ่ม "เพิ่ม" เพื่อติดตั้ง
+
+💡 หากไม่เห็นตัวเลือก "เพิ่มไปยังหน้าจอหลัก":
+• ตรวจสอบว่าใช้ Safari (ไม่ใช่ Chrome หรือ App อื่น)
+• รีเฟรชหน้าเว็บแล้วลองใหม่
+
+หลังติดตั้งแล้ว จะเห็นไอคอนแอปบนหน้าจอหลัก!
+    `.trim();
+    
+    // Show longer alert for iOS instructions
+    const container = document.getElementById('alert-container');
+    container.innerHTML = `
+        <div class="alert alert-info" style="white-space: pre-line; text-align: left; font-size: 0.9rem;">
+            ${message}
+        </div>
+    `;
+    
+    // Auto-hide after 15 seconds (longer for iOS instructions)
+    setTimeout(() => {
+        container.innerHTML = '';
+    }, 15000);
+}
+
+// Try to trigger native share on iOS
+function triggerIOSShare() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Smart Inventory - ระบบนับสต๊อกสินค้า',
+            text: 'ติดตั้งแอปนับสต๊อกสินค้าอัจฉริยะ',
+            url: window.location.href
+        }).then(() => {
+            showAlert('💡 หลังจากแชร์แล้ว ให้เลือก "เพิ่มไปยังหน้าจอหลัก" เพื่อติดตั้งแอป', 'info');
+        }).catch((error) => {
+            console.log('Error sharing:', error);
+            showIOSInstallInstructions();
+        });
+    } else {
+        // Fallback to instructions
+        showIOSInstallInstructions();
     }
 }
 
@@ -128,6 +186,18 @@ function initializeApp() {
     document.getElementById('authorize-drive')?.addEventListener('click', authorizeDrive);
     document.getElementById('check-drive-status')?.addEventListener('click', checkDriveStatus);
     document.getElementById('pwa-install-btn')?.addEventListener('click', installPWA);
+    document.getElementById('ios-share-btn')?.addEventListener('click', triggerIOSShare);
+    
+    // Show iOS share button if on iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+        const iosBtn = document.getElementById('ios-share-btn');
+        const pwaBtn = document.getElementById('pwa-install-btn');
+        if (iosBtn && pwaBtn) {
+            iosBtn.style.display = 'inline-block';
+            pwaBtn.textContent = '📱 คำแนะนำติดตั้ง';
+        }
+    }
     
     // Initialize barcode input change (both input and change events)
     document.getElementById('barcode').addEventListener('input', handleBarcodeChange);
