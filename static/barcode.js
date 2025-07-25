@@ -82,15 +82,21 @@ function showInstallPrompt() {
 // Install PWA
 function installPWA() {
     const installButton = document.getElementById('pwa-install-btn');
+    
     if (deferredPrompt) {
+        // Use the deferred prompt if available
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
                 console.log('User accepted the PWA install prompt');
-                installButton.style.display = 'none';
+                showAlert('✅ แอปถูกติดตั้งเรียบร้อย!', 'success');
+                if (installButton) installButton.style.display = 'none';
             }
             deferredPrompt = null;
         });
+    } else {
+        // Show instructions if no prompt available
+        showAlert('📱 วิธีติดตั้งแอป:\n• Chrome: กดเมนู 3 จุด → "ติดตั้งแอป"\n• Safari: กด Share → "เพิ่มไปยังหน้าจอหลัก"\n• Firefox: กดเมนู → "ติดตั้งแอป"', 'info');
     }
 }
 
@@ -102,9 +108,10 @@ function initializeApp() {
     document.getElementById('start-camera').addEventListener('click', startCamera);
     document.getElementById('take-photo').addEventListener('click', takePhoto);
     document.getElementById('retake-photo').addEventListener('click', retakePhoto);
-    document.getElementById('test-upload').addEventListener('click', testUpload);
-    document.getElementById('authorize-drive').addEventListener('click', authorizeDrive);
-    document.getElementById('check-drive-status').addEventListener('click', checkDriveStatus);
+    document.getElementById('test-upload')?.addEventListener('click', testUpload);
+    document.getElementById('authorize-drive')?.addEventListener('click', authorizeDrive);
+    document.getElementById('check-drive-status')?.addEventListener('click', checkDriveStatus);
+    document.getElementById('pwa-install-btn')?.addEventListener('click', installPWA);
     
     // Initialize barcode input change (both input and change events)
     document.getElementById('barcode').addEventListener('input', handleBarcodeChange);
