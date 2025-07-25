@@ -378,12 +378,21 @@ function handleSubmit(event) {
     event.preventDefault();
     
     const formData = new FormData(event.target);
+    const productNameFromBarcode = document.getElementById('product-name').textContent;
+    const manualProductName = formData.get('manual_product_name');
+    
+    // Use manual product name if barcode product name is empty or default
+    let finalProductName = productNameFromBarcode && productNameFromBarcode !== '' && productNameFromBarcode !== 'ชื่อสินค้าไม่ระบุ' 
+        ? productNameFromBarcode 
+        : manualProductName;
+    
     const data = {
         barcode: formData.get('barcode'),
         quantity: parseInt(formData.get('quantity')),
         branch: formData.get('branch'),
-        product_name: document.getElementById('product-name').textContent,
-        counter_name: formData.get('counter_name')
+        product_name: finalProductName,
+        counter_name: formData.get('counter_name'),
+        manual_product_name: manualProductName
     };
     
     // Debug logging
@@ -410,9 +419,10 @@ function handleSubmit(event) {
             barcode: !!data.barcode,
             quantity: !!data.quantity, 
             branch: !!data.branch,
-            product_name: !!data.product_name
+            product_name: !!data.product_name,
+            manual_product_name: !!data.manual_product_name
         });
-        showAlert('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+        showAlert('กรุณากรอกข้อมูลให้ครบถ้วน (บาร์โค้ด, จำนวน, สาขา, และชื่อสินค้า)', 'error');
         return;
     }
     
@@ -476,7 +486,7 @@ function submitStockData(data) {
 function addRecentScan(data) {
     const scan = {
         barcode: data.barcode,
-        product_name: data.product_name,
+        product_name: data.product_name || data.manual_product_name || 'ไม่ระบุชื่อสินค้า',
         quantity: data.quantity,
         branch: data.branch,
         timestamp: new Date().toLocaleString('th-TH')
@@ -527,6 +537,9 @@ function updateRecentScansDisplay() {
 function resetForm() {
     document.getElementById('stock-form').reset();
     hideProductInfo();
+    
+    // Clear manual product name field
+    document.getElementById('manual_product_name').value = '';
     
     // Reset camera
     const video = document.getElementById('video');
