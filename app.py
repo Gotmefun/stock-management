@@ -73,7 +73,7 @@ def upload_via_apps_script(image_data, filename, branch=None):
         else:
             folder_name = 'สาขาตัวเมือง'  # Default to CITY branch
         
-        folder = f'Check Stock Project/{folder_name}'
+        folder = f'Pic Stock 3 User/{folder_name}'
         
         payload = {
             'imageData': image_data,
@@ -118,6 +118,7 @@ def upload_via_apps_script(image_data, filename, branch=None):
             except json.JSONDecodeError as e:
                 print(f"❌ Apps Script JSON parse error: {e}")
                 print(f"Raw response: {response.text}")
+                print(f"Response content type: {response.headers.get('content-type')}")
                 return None
         else:
             print(f"❌ Apps Script request failed: {response.status_code}")
@@ -339,7 +340,16 @@ def test_upload():
         print("\n=== TESTING OAUTH2 DRIVE ===")
         if oauth_drive_manager.is_authorized():
             try:
-                folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Test Upload')
+                # Use branch-specific folder for test upload too
+                branch_name_mapping = {
+                    'CITY': 'สาขาตัวเมือง',
+                    'SCHOOL': 'สาขาหน้าโรงเรียน', 
+                    'PONGPAI': 'สาขาโป่งไผ่'
+                }
+                branch_folder = branch_name_mapping.get(branch, 'สาขาตัวเมือง')
+                test_folder_path = f'Pic Stock 3 User/{branch_folder}/Test Upload'
+                print(f"Test upload folder path: {test_folder_path}")
+                folder_id = oauth_drive_manager.get_or_create_folder_path(test_folder_path)
                 oauth_result = oauth_drive_manager.upload_image_from_base64(
                     data['image_data'], 
                     f"oauth_{filename}",
@@ -517,8 +527,17 @@ def submit_stock():
                 # Try OAuth2 Google Drive upload as fallback
                 if oauth_drive_manager.is_authorized():
                     try:
-                        # Get or create folder path
-                        folder_id = oauth_drive_manager.get_or_create_folder_path('Check Stock Project/Pic Stock Counting')
+                        # Get or create folder path with branch-specific folder
+                        branch_code = data.get('branch', 'CITY')
+                        branch_name_mapping = {
+                            'CITY': 'สาขาตัวเมือง',
+                            'SCHOOL': 'สาขาหน้าโรงเรียน', 
+                            'PONGPAI': 'สาขาโป่งไผ่'
+                        }
+                        branch_folder = branch_name_mapping.get(branch_code, 'สาขาตัวเมือง')
+                        folder_path = f'Pic Stock 3 User/{branch_folder}'
+                        print(f"OAuth2 folder path: {folder_path}")
+                        folder_id = oauth_drive_manager.get_or_create_folder_path(folder_path)
                         
                         # Upload to Google Drive
                         oauth_upload_result = oauth_drive_manager.upload_image_from_base64(
