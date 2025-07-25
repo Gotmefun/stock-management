@@ -43,8 +43,10 @@ function registerServiceWorker() {
     // Handle PWA install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
         console.log('PWA install prompt triggered');
+        console.log('Event details:', e);
         e.preventDefault();
         deferredPrompt = e;
+        console.log('deferredPrompt saved:', !!deferredPrompt);
         showInstallPrompt();
     });
     
@@ -81,22 +83,36 @@ function showInstallPrompt() {
 
 // Install PWA
 function installPWA() {
+    console.log('installPWA function called');
+    console.log('deferredPrompt available:', !!deferredPrompt);
+    
     const installButton = document.getElementById('pwa-install-btn');
     
     if (deferredPrompt) {
+        console.log('Using deferred prompt');
         // Use the deferred prompt if available
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
+            console.log('User choice:', choiceResult.outcome);
             if (choiceResult.outcome === 'accepted') {
                 console.log('User accepted the PWA install prompt');
                 showAlert('✅ แอปถูกติดตั้งเรียบร้อย!', 'success');
                 if (installButton) installButton.style.display = 'none';
+            } else {
+                console.log('User dismissed the PWA install prompt');
+                showAlert('❌ การติดตั้งถูกยกเลิก', 'warning');
             }
             deferredPrompt = null;
         });
     } else {
-        // Show instructions if no prompt available
-        showAlert('📱 วิธีติดตั้งแอป:\n• Chrome: กดเมนู 3 จุด → "ติดตั้งแอป"\n• Safari: กด Share → "เพิ่มไปยังหน้าจอหลัก"\n• Firefox: กดเมนู → "ติดตั้งแอป"', 'info');
+        console.log('No deferred prompt available, showing instructions');
+        // Check if already installed
+        if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+            showAlert('✅ แอปถูกติดตั้งไว้แล้ว!', 'success');
+        } else {
+            // Show instructions if no prompt available
+            showAlert('📱 วิธีติดตั้งแอป:\n• Chrome: กดเมนู 3 จุด → "ติดตั้งแอป"\n• Safari: กด Share Icon → "เพิ่มไปยังหน้าจอหลัก"\n• Firefox: กดเมนู → "ติดตั้งแอป"', 'info');
+        }
     }
 }
 
