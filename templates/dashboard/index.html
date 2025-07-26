@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Business Dashboard - ภาพรวมธุรกิจ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .last-update {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-change {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .change-positive {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .change-negative {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .left-section {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .right-section {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .action-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .action-btn.danger {
+            background: linear-gradient(135deg, #ff4757 0%, #c44569 100%);
+        }
+        
+        .action-btn.success {
+            background: linear-gradient(135deg, #2ed573 0%, #17c0eb 100%);
+        }
+        
+        .action-btn.info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        }
+        
+        .action-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .action-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .action-description {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .action-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff4757;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
+        .branch-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .branch-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .branch-card.alert {
+            border-left-color: #ff4757;
+            background: #fff5f5;
+        }
+        
+        .branch-info {
+            flex: 1;
+        }
+        
+        .branch-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .branch-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .branch-metrics {
+            text-align: right;
+        }
+        
+        .revenue-amount {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .performance-bar {
+            width: 100px;
+            height: 6px;
+            background: #e0e6ed;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        
+        .performance-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .perf-excellent {
+            background: linear-gradient(90deg, #2ed573, #17c0eb);
+        }
+        
+        .perf-good {
+            background: linear-gradient(90deg, #ffa502, #ff6348);
+        }
+        
+        .perf-poor {
+            background: linear-gradient(90deg, #ff4757, #c44569);
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .alert-critical {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .alert-warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .alert-info {
+            border-left-color: #17a2b8;
+            background: #f0f9ff;
+        }
+        
+        .alert-icon {
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            margin-top: 0.1rem;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-message {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .alert-action {
+            font-size: 0.8rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .alert-time {
+            font-size: 0.7rem;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+        
+        .weather-widget {
+            text-align: center;
+            background: linear-gradient(135deg, #87CEEB 0%, #4682B4 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+        }
+        
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .weather-condition {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .weather-forecast {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+        }
+        
+        .forecast-item {
+            text-align: center;
+        }
+        
+        .forecast-day {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .forecast-temp {
+            font-weight: bold;
+            margin-top: 0.25rem;
+        }
+        
+        .business-impact {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .activity-time {
+            color: #667eea;
+            font-weight: 600;
+            margin-right: 1rem;
+            min-width: 50px;
+        }
+        
+        .activity-message {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        .activity-user {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .task-high {
+            border-left-color: #ff4757;
+        }
+        
+        .task-medium {
+            border-left-color: #ffa502;
+        }
+        
+        .task-low {
+            border-left-color: #2ed573;
+        }
+        
+        .task-info {
+            flex: 1;
+        }
+        
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .task-due {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .task-amount {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🏠 Business Dashboard</h1>
+            <div class="user-info">
+                {% if session.role == 'admin' %}
+                <div class="admin-menu">
+                    <a href="/dashboard" class="current">🏠 Dashboard</a>
+                    <a href="{{ url_for('index') }}">📱 นับสต๊อก</a>
+                    <a href="/purchase">🛒 สั่งซื้อ</a>
+                    <a href="/sales">📊 ยอดขาย</a>
+                    <a href="/inventory">📦 สต๊อก</a>
+                    <a href="/finance">💰 การเงิน</a>
+                </div>
+                {% endif %}
+                <span>{{ session.username }} ({{ session.role }})</span>
+                <a href="{{ url_for('logout') }}" style="color: white; margin-left: 1rem;">ออกจากระบบ</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="dashboard-title">ภาพรวมธุรกิจ ptee88.com</div>
+            <div class="last-update">อัปเดตล่าสุด: {{ moment().strftime('%d/%m/%Y %H:%M') }}</div>
+        </div>
+        
+        <!-- Real-time Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" style="color: #28a745;">{{ "{:,.0f}".format(real_time_metrics.total_revenue_today) }}฿</div>
+                <div class="metric-label">รายได้วันนี้</div>
+                <div class="metric-change change-positive">+{{ real_time_metrics.total_revenue_change }}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #667eea;">{{ real_time_metrics.orders_today }}</div>
+                <div class="metric-label">ออเดอร์วันนี้</div>
+                <div class="metric-change change-positive">+{{ real_time_metrics.orders_change }}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #17a2b8;">{{ real_time_metrics.active_customers }}</div>
+                <div class="metric-label">ลูกค้าใช้งาน</div>
+                <div class="metric-change change-positive">+{{ real_time_metrics.customers_change }}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #ffc107;">{{ real_time_metrics.low_stock_items }}</div>
+                <div class="metric-label">สินค้าใกล้หมด</div>
+                <div class="metric-change change-positive">+{{ real_time_metrics.stock_change }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #dc3545;">{{ real_time_metrics.pending_purchases }}</div>
+                <div class="metric-label">รอสั่งซื้อ</div>
+                <div class="metric-change change-negative">{{ real_time_metrics.purchases_change }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #20c997;">{{ "{:,.0f}".format(real_time_metrics.cash_in_hand) }}฿</div>
+                <div class="metric-label">เงินสดคงเหลือ</div>
+                <div class="metric-change change-positive">+{{ real_time_metrics.cash_change }}%</div>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard Grid -->
+        <div class="main-grid">
+            <!-- Left Section -->
+            <div class="left-section">
+                <!-- Daily Sales Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📈 ยอดขายรายชั่วโมง (วันนี้)</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Branch Overview -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🏢 ภาพรวม 3 สาขา</div>
+                    </div>
+                    <div class="branch-grid">
+                        {% for branch in branch_overview %}
+                        <div class="branch-card {{ 'alert' if branch.status == 'alert' else '' }}">
+                            <div class="branch-info">
+                                <div class="branch-name">{{ branch.name }}</div>
+                                <div class="branch-details">
+                                    {{ branch.orders_count }} ออเดอร์ | {{ branch.staff_count }} คน | อัปเดต: {{ branch.last_update[-5:] }}
+                                </div>
+                            </div>
+                            <div class="branch-metrics">
+                                <div class="revenue-amount">{{ "{:,.0f}".format(branch.revenue_today) }}฿</div>
+                                <div class="performance-bar">
+                                    <div class="performance-fill 
+                                        {% if branch.performance >= 80 %}perf-excellent
+                                        {% elif branch.performance >= 60 %}perf-good  
+                                        {% else %}perf-poor{% endif %}"
+                                        style="width: {{ branch.performance }}%"></div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #666;">{{ branch.performance }}% ของเป้าหมาย</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 ตัวชี้วัดสำคัญ (KPIs)</div>
+                    </div>
+                    <div class="metrics-grid" style="margin-bottom: 0;">
+                        {% for kpi in kpi_cards %}
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #667eea;">{{ kpi.value }}{{ kpi.unit }}</div>
+                            <div class="metric-label">{{ kpi.name }}</div>
+                            <div class="metric-change change-positive">{{ kpi.performance }}% ของเป้า</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Section -->
+            <div class="right-section">
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚡ ปฏิบัติการด่วน</div>
+                    </div>
+                    <div class="quick-actions">
+                        {% for action in quick_actions %}
+                        <a href="{{ action.url }}" class="action-btn {{ action.color }}" style="position: relative;">
+                            <div class="action-icon">{{ action.icon }}</div>
+                            <div class="action-name">{{ action.name }}</div>
+                            <div class="action-description">{{ action.description }}</div>
+                            {% if action.count > 0 %}
+                            <div class="action-count">{{ action.count }}</div>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Critical Alerts -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🚨 การแจ้งเตือนสำคัญ</div>
+                    </div>
+                    {% for alert in critical_alerts %}
+                    <div class="alert-item alert-{{ alert.type }}">
+                        <div class="alert-icon">
+                            {% if alert.type == 'critical' %}🚨
+                            {% elif alert.type == 'warning' %}⚠️
+                            {% else %}ℹ️{% endif %}
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">{{ alert.title }}</div>
+                            <div class="alert-message">{{ alert.message }}</div>
+                            <a href="{{ alert.url }}" class="alert-action">{{ alert.action }} →</a>
+                            <div class="alert-time">{{ alert.time }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Weather Widget -->
+                <div class="weather-widget">
+                    <div class="weather-temp">{{ weather_data.temperature }}°C</div>
+                    <div class="weather-condition">{{ weather_data.description }}</div>
+                    <div class="weather-forecast">
+                        {% for forecast in weather_data.forecast %}
+                        <div class="forecast-item">
+                            <div class="forecast-day">{{ forecast.day }}</div>
+                            <div class="forecast-temp">{{ forecast.temp }}°</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="business-impact">
+                        💡 {{ weather_data.business_impact.message }}
+                    </div>
+                </div>
+                
+                <!-- Recent Activities -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🕐 กิจกรรมล่าสุด</div>
+                    </div>
+                    {% for activity in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-time">{{ activity.time }}</div>
+                        <div class="activity-message">
+                            {{ activity.message }}
+                            <div class="activity-user">โดย {{ activity.user }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Upcoming Tasks -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📅 งานที่ต้องทำ</div>
+                    </div>
+                    {% for task in upcoming_tasks %}
+                    <div class="task-item task-{{ task.priority }}">
+                        <div class="task-info">
+                            <div class="task-title">{{ task.title }}</div>
+                            <div class="task-due">ครบกำหนด: {{ task.due_date }}</div>
+                        </div>
+                        {% if task.amount > 0 %}
+                        <div class="task-amount">{{ "{:,.0f}".format(task.amount) }}฿</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Daily Sales Chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ daily_sales_chart.labels | tojson }},
+                datasets: [
+                    {% for dataset in daily_sales_chart.datasets %}
+                    {
+                        label: '{{ dataset.label }}',
+                        data: {{ dataset.data | tojson }},
+                        borderColor: '{{ dataset.color }}',
+                        backgroundColor: '{{ dataset.color }}20',
+                        tension: 0.4,
+                        fill: true
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + '฿';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh every 5 minutes
+        setTimeout(() => {
+            window.location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

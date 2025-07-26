@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Purchase Dashboard - วิเคราะห์การสั่งซื้อ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .nav-breadcrumb {
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .breadcrumb {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .metric-change {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        
+        .change-positive {
+            color: #28a745;
+        }
+        
+        .change-negative {
+            color: #dc3545;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        .sidebar-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        .supplier-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .supplier-info {
+            flex: 1;
+        }
+        
+        .supplier-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .supplier-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .supplier-metrics {
+            text-align: right;
+        }
+        
+        .performance-score {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .score-excellent {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .score-good {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .score-average {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .alert-critical {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .alert-warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .alert-info {
+            border-left-color: #17a2b8;
+            background: #f0f9ff;
+        }
+        
+        .alert-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-description {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .pipeline-step {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .step-name {
+            font-weight: 500;
+        }
+        
+        .step-count {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .category-breakdown {
+            margin-bottom: 1rem;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .category-name {
+            font-weight: 500;
+        }
+        
+        .category-amount {
+            font-weight: 600;
+        }
+        
+        .category-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e6ed;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.25rem 0;
+        }
+        
+        .category-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📊 Purchase Analytics Dashboard</h1>
+            <div class="user-info">
+                <span>{{ session.username }} ({{ session.role }})</span>
+                <a href="{{ url_for('logout') }}" style="color: white; margin-left: 1rem;">ออกจากระบบ</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="nav-breadcrumb">
+            <div class="breadcrumb">
+                <a href="{{ url_for('dashboard') }}">🏠 หน้าหลัก</a> > 
+                <a href="/purchase">🛒 จัดการการสั่งซื้อ</a> > 
+                <span>📊 Dashboard</span>
+            </div>
+        </div>
+        
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value" style="color: #667eea;">{{ purchase_metrics.total_orders_month }}</div>
+                <div class="metric-label">รายการสั่งซื้อ (เดือนนี้)</div>
+                <div class="metric-change change-positive">+15% จากเดือนที่แล้ว</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #28a745;">{{ "{:,.0f}".format(purchase_metrics.total_spent_month) }}฿</div>
+                <div class="metric-label">ยอดใช้จ่าย (เดือนนี้)</div>
+                <div class="metric-change change-positive">-8% จากเดือนที่แล้ว</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #17a2b8;">{{ "{:,.0f}".format(purchase_metrics.avg_order_value) }}฿</div>
+                <div class="metric-label">มูลค่าเฉลี่ยต่อออเดอร์</div>
+                <div class="metric-change change-positive">+3% จากเดือนที่แล้ว</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #ffc107;">{{ purchase_metrics.pending_orders }}</div>
+                <div class="metric-label">รายการรอดำเนินการ</div>
+                <div class="metric-change change-negative">{{ purchase_metrics.overdue_orders }} รายการเกินกำหนด</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #6f42c1;">{{ purchase_metrics.supplier_count }}</div>
+                <div class="metric-label">จำนวนซัพพลายเออร์</div>
+                <div class="metric-change">ใช้งานแล้ว 12 ราย</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #20c997;">{{ "{:,.0f}".format(purchase_metrics.cost_savings_month) }}฿</div>
+                <div class="metric-label">ประหยัดได้ (เดือนนี้)</div>
+                <div class="metric-change change-positive">{{ purchase_metrics.order_fulfillment_rate }}% ความสำเร็จ</div>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard -->
+        <div class="dashboard-grid">
+            <!-- Charts Section -->
+            <div class="chart-section">
+                <!-- Monthly Spending Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📈 แนวโน้มการใช้จ่ายรายเดือน</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="spendingChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Supplier Performance -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🏢 ประสิทธิภาพซัพพลายเออร์</div>
+                    </div>
+                    {% for supplier in supplier_analysis %}
+                    <div class="supplier-item">
+                        <div class="supplier-info">
+                            <div class="supplier-name">{{ supplier.supplier_name }}</div>
+                            <div class="supplier-details">
+                                {{ supplier.category }} | {{ supplier.total_orders }} ออเดอร์ | {{ "{:,.0f}".format(supplier.total_value) }}฿
+                                <br>ส่งตรงเวลา: {{ supplier.on_time_delivery }}% | คะแนน: {{ supplier.quality_score }}/5
+                            </div>
+                        </div>
+                        <div class="supplier-metrics">
+                            <div class="performance-score score-{{ supplier.relationship_score }}">
+                                {{ supplier.relationship_score.upper() }}
+                            </div>
+                            <div style="font-size: 0.8rem; margin-top: 0.25rem;">
+                                เงื่อนไข: {{ supplier.payment_terms }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Sidebar Section -->
+            <div class="sidebar-section">
+                <!-- Inventory Alerts -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🚨 การแจ้งเตือนสต๊อก</div>
+                    </div>
+                    {% for alert in inventory_alerts %}
+                    <div class="alert-item alert-{{ 'critical' if alert.type == 'critical_stock' else 'warning' if alert.type == 'price_increase' else 'info' }}">
+                        <div class="alert-icon">
+                            {% if alert.type == 'critical_stock' %}🚨
+                            {% elif alert.type == 'slow_moving' %}📦
+                            {% elif alert.type == 'price_increase' %}📈
+                            {% endif %}
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">{{ alert.product_name }}</div>
+                            <div class="alert-description">
+                                {% if alert.type == 'critical_stock' %}
+                                    คงเหลือ {{ alert.current_stock }} ชิ้น ({{ alert.days_until_stockout }} วันจะหมด)
+                                {% elif alert.type == 'slow_moving' %}
+                                    เก็บนาน {{ alert.days_in_stock }} วัน ({{ alert.current_stock }} ชิ้น)
+                                {% elif alert.type == 'price_increase' %}
+                                    ราคาขึ้น {{ alert.increase_percentage }}% ({{ alert.effective_date }})
+                                {% endif %}
+                                <br><strong>{{ alert.suggested_action }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Order Pipeline -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 สถานะออเดอร์</div>
+                    </div>
+                    {% for step, count in order_pipeline.items() %}
+                    <div class="pipeline-step">
+                        <div class="step-name">
+                            {% if step == 'draft' %}📝 ร่าง
+                            {% elif step == 'pending_approval' %}⏳ รออนุมัติ
+                            {% elif step == 'approved' %}✅ อนุมัติแล้ว
+                            {% elif step == 'sent_to_supplier' %}📤 ส่งให้ซัพพลายเออร์
+                            {% elif step == 'confirmed' %}🤝 ยืนยันแล้ว
+                            {% elif step == 'in_transit' %}🚚 กำลังจัดส่ง
+                            {% elif step == 'delivered' %}📦 จัดส่งแล้ว
+                            {% elif step == 'completed' %}🎉 เสร็จสิ้น
+                            {% endif %}
+                        </div>
+                        <div class="step-count">{{ count }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Cost Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">💰 แบ่งค่าใช้จ่ายตามหมวดหมู่</div>
+                    </div>
+                    <div class="category-breakdown">
+                        {% for category in cost_breakdown %}
+                        <div class="category-item">
+                            <div>
+                                <div class="category-name">{{ category.category }}</div>
+                                <div class="category-bar">
+                                    <div class="category-fill" style="width: {{ category.percentage }}%"></div>
+                                </div>
+                            </div>
+                            <div class="category-amount">{{ "{:,.0f}".format(category.amount) }}฿</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Monthly Spending Chart
+        const ctx = document.getElementById('spendingChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ monthly_spending.months | tojson }},
+                datasets: [{
+                    label: 'การใช้จ่ายจริง',
+                    data: {{ monthly_spending.spending | tojson }},
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'งบประมาณ',
+                    data: {{ monthly_spending.budget | tojson }},
+                    borderColor: '#dc3545',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + '฿';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

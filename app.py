@@ -9,6 +9,11 @@ from sheets_manager import create_sheets_manager
 from oauth_manager import oauth_drive_manager
 from supabase_manager import create_supabase_manager
 
+# Import new business modules
+from pages.purchase.index import purchase_hub
+from pages.purchase.dashboard import purchase_dashboard
+from pages.dashboard.index import business_dashboard
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -778,9 +783,15 @@ def view_products():
         return redirect(url_for('index'))
 
 @app.route('/dashboard')
-@admin_required
+@admin_required  
 def dashboard():
-    """Smart Inventory Dashboard - Phase 1"""
+    """Enhanced Business Dashboard - Central hub for all business metrics"""
+    return business_dashboard()
+
+@app.route('/dashboard/legacy')
+@admin_required
+def dashboard_legacy():
+    """Smart Inventory Dashboard - Legacy Version"""
     if not supabase_manager:
         flash('Database not available. Using legacy system.', 'error')
         return redirect(url_for('admin_summary'))
@@ -806,6 +817,22 @@ def dashboard():
         traceback.print_exc()
         flash(f'Error loading dashboard: {str(e)}', 'error')
         return redirect(url_for('admin_summary'))
+
+# ===============================
+# BUSINESS MODULES ROUTES
+# ===============================
+
+@app.route('/purchase')
+@admin_required
+def purchase_index():
+    """Purchase Management Hub"""
+    return purchase_hub()
+
+@app.route('/purchase/dashboard')
+@admin_required
+def purchase_dashboard_view():
+    """Purchase Analytics Dashboard"""
+    return purchase_dashboard()
 
 @app.route('/favicon.ico')
 def favicon():
